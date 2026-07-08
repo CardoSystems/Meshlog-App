@@ -1,0 +1,327 @@
+export function disposeThreeBg() {
+    if(window._globeAnimationFrame) {
+        cancelAnimationFrame(window._globeAnimationFrame);
+    }
+    if(window._globeIntervals) {
+        window._globeIntervals.forEach(clearInterval);
+    }
+    if(window._globeTimeouts) {
+        window._globeTimeouts.forEach(clearTimeout);
+    }
+    $("#globe canvas").remove();
+}
+
+export function initThreeBg() {
+    window._globeIntervals = [];
+    window._globeTimeouts = [];
+
+    var globe,
+        globeCount = 0;
+
+    function createGlobe(){
+        var newData = [];
+        globeCount++;
+        $("#globe canvas").remove();
+        if($("#globe-dd:checked").length){
+            newData = window.data ? window.data.slice() : [];
+        }
+
+        globe = new ENCOM.Globe(window.innerWidth, window.innerHeight, {
+            font: "Inconsolata",
+            data: newData,
+            tiles: window.grid ? window.grid.tiles : [],
+            baseColor: $("#globe-color").val(),
+            markerColor: $("#marker-color").val(),
+            pinColor: $("#pin-color").val(),
+            satelliteColor: $("#satellite-color").val(),
+            scale: parseFloat($("#globe-scale").val()),
+            dayLength: 1000 * parseFloat($("#globe-spr").val()),
+            introLinesDuration: parseFloat($("#globe-id").val()),
+            maxPins: parseFloat($("#globe-mp").val()),
+            maxMarkers: parseFloat($("#globe-mm").val()),
+            viewAngle: parseFloat($("#globe-va").val())
+        });
+        window.encomGlobe = globe;
+
+        $("#globe").append(globe.domElement);
+        globe.init(start);
+    }
+
+    function onWindowResize(){
+        if(globe) {
+            globe.camera.aspect = window.innerWidth / window.innerHeight;
+            globe.camera.updateProjectionMatrix();
+            globe.renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    }
+
+    function roundNumber(num){
+        return Math.round(num * 100)/100;
+    }
+
+    function projectionToLatLng(width, height, x,y){
+        return {
+            lat: 90 - 180*(y/height),
+            lon: 360*(x/width)- 180,
+        };
+    }
+
+    function animate(){
+        if(globe){
+            globe.tick();
+        }
+        window._globeAnimationFrame = requestAnimationFrame(animate);
+    }
+
+    function start(){
+        if(globeCount == 1){ 
+            $("#apply-button").click(function(e){
+                globe.destroy(function(){
+                    createGlobe();
+                });
+            });
+            $(".projection").click(function(e){
+                var offset = $(this).offset();
+                var latLon = projectionToLatLng($(".projection").width(), $(".projection").height(), e.clientX - offset.left, e.clientY - offset.top);
+
+                var selectedId = $("#add-element .selected").attr("id");
+
+                if(selectedId == "add-pin"){
+                    globe.addPin(latLon.lat, latLon.lon, "User Dropped Pin");
+                } else if(selectedId == "add-marker"){
+                    globe.addMarker(latLon.lat, latLon.lon, "User Marker", true);
+                } else if(selectedId == "add-satellite"){
+                    var opts = {
+                        coreColor: $("#satellite-color").val(),
+                        numWaves: parseInt($("#globe-si").val())
+                    };
+                    globe.addSatellite(latLon.lat, latLon.lon, parseFloat($("#globe-sa").val()), opts);
+                }
+            });
+
+            $("#add-element li").click(function(e){
+                $("#add-element li").removeClass("selected");
+                $(e.currentTarget).addClass("selected");
+            });
+
+            animate();
+
+            window._globeIntervals.push(setInterval(function(){
+                if(!globe || !$("#globe-dd:checked").length){
+                    return;
+                }
+                var lat = Math.random() * 180 - 90,
+                   lon = Math.random() * 360 - 180,
+                   name = "Test " + Math.floor(Math.random() * 100);
+                globe.addPin(lat,lon, name);
+            }, 5000));
+        }
+
+        if($("#globe-dd:checked").length){
+            window._globeTimeouts.push(setTimeout(function(){
+                var constellation = [];
+                var opts = {
+                    coreColor: $("#satellite-color").val(),
+                    numWaves: parseInt($("#globe-si").val())
+                };
+                var alt =  parseFloat($("#globe-sa").val());
+
+                for(var i = 0; i< 2; i++){
+                    for(var j = 0; j< 3; j++){
+                         constellation.push({
+                            lat: 50 * i - 30 + 15 * Math.random(), 
+                             lon: 120 * j - 120 + 30 * i, 
+                             altitude: alt
+                             });
+                    }
+                }
+                globe.addConstellation(constellation, opts);
+            }, 4000));
+
+            window._globeTimeouts.push(setTimeout(function(){
+                globe.addMarker(49.25, -123.1, "Vancouver");
+                globe.addMarker(35.6895, 129.69171, "Tokyo", true);
+            }, 2000));
+        }
+    }
+
+    function openOptions(){
+        var headerTopPosition = $("#header-top").position().top;
+        var headerBottomPosition = $("#header-bottom").position().top;
+        var headerHeight = $("#header-top").outerHeight();
+        $(".header-animator").offset({top: $(document).height()/2, left: 25});
+        $(".header-animator").height(0);
+
+        $("#options").data("left", $("#options").css("left"));
+        $("#thumbprint").data("left", $("#thumbprint").css("left"));
+        $("#options").animate({left: 0}, 500);
+        $("#thumbprint").animate({left: 265}, 500);
+
+        $("#options-content").delay(1500).animate({opacity: 1}, 500);
+
+        window._globeTimeouts.push(setTimeout(function(){
+            $(".header-animator").css("visibility", "visible");
+
+            $("#header-animator-outside").animate({
+                top: headerTopPosition,
+                height: headerBottomPosition - headerTopPosition + headerHeight
+                }, 500);
+
+            $("#header-animator-inside").animate({
+                top: headerTopPosition + headerHeight,
+                height: headerBottomPosition - headerTopPosition - headerHeight
+                }, 500);
+        }, 500));
+
+        window._globeTimeouts.push(setTimeout(function(){
+            $(".header-animator").css("visibility", "hidden");
+            $(".header").css("visibility", "visible");
+        }, 1000));
+    }
+
+    function closeOptions(){
+        $("#options").animate({left: $("#options").data("left")}, 500);
+        $("#thumbprint").animate({left: $("#thumbprint").data("left")}, 500);
+        $("#options-content").animate({opacity: 0}, 500);
+        $(".header").css("visibility", "hidden");
+    }
+
+    var open = false;
+
+    if(!window.Detector || !window.Detector.webgl) {
+        if(window.Detector) {
+            window.Detector.addGetWebGLMessage({parent: document.getElementById("container")});
+        }
+        return;
+    }
+
+    window.addEventListener( 'resize', onWindowResize, false );
+
+    $("#globe-color").spectrum({
+        color: "#ffcc00",
+        showButtons: false,
+        showInput: false,
+        change: function(color){
+            if(globe) globe.setBaseColor(color.toHexString());
+        }
+    }); 
+
+    $("#pin-color").spectrum({
+        color: "#8FD8D8",
+        showButtons: false,
+        showInput: false,
+        change: function(color){
+            if(globe) globe.setPinColor(color.toHexString());
+        }
+    }); 
+
+    $("#marker-color").spectrum({
+        color: "#ffcc00",
+        showButtons: false,
+        showInput: false,
+        change: function(color){
+            if(globe) globe.setMarkerColor(color.toHexString());
+        }
+    }); 
+
+    $("#satellite-color").spectrum({
+        color: "#ff0000",
+        showButtons: false,
+        showInput: false,
+        change: function(color){
+            if(globe){
+                for(var x in globe.satellites){
+                    globe.satellites[x].changeCanvas(null, null, color.toHexString());
+                }
+            }
+        }
+    }); 
+
+    $("[data-slider]").each(function () {
+        var input = $(this);
+        $("<span>").addClass("slider-output").insertAfter($(this)).html(input.val());
+    }).bind("slider:ready slider:changed", function (event, data) {
+        $(this).nextAll(".slider-output:first").html(data.value.toFixed(3));
+    });
+
+    $(":checkbox").switchButton();
+
+    $("#globe-scale").bind("slider:changed", function (event, data) {
+        if(globe) globe.setScale(data.value);
+    });
+
+    $("#globe-va").bind("slider:changed", function (event, data) {
+        if(globe) globe.viewAngle = data.value;
+    });
+
+    $("#globe-spr").bind("slider:changed", function (event, data) {
+        if(globe) globe.dayLength = data.value * 1000;
+    });
+
+    $("#globe-mp").bind("slider:changed", function (event, data) {
+        if(globe) globe.setMaxPins(data.value);
+    });
+
+    $("#globe-mm").bind("slider:changed", function (event, data) {
+        if(globe) globe.setMaxMarkers(data.value);
+    });
+
+    $("#globe-sa").bind("slider:changed", function (event, data) {
+        if(globe){
+            for(var x in globe.satellites){
+                globe.satellites[x].changeAltitude(data.value);
+            }
+        }
+    });
+
+    $("#globe-si").bind("slider:changed", function (event, data) {
+        if(globe){
+            for(var x in globe.satellites){
+                globe.satellites[x].changeCanvas(data.value);
+            }
+        }
+    });
+
+    var docHeight = $(document).height();
+
+    window.WebFontConfig = {
+        google: { families: ['Inconsolata'] },
+        active: function(){
+            $("#options").css({
+                "visibility": "visible",
+                "top": docHeight/2,
+                "bottom": docHeight/2
+            }).animate({
+                "top": 0,
+                "bottom": 0,
+                "padding-top": 46
+            },800,function complete(){
+                $("#thumbprint").animate({opacity: 1});
+                $("#thumbprint").click(function(){
+                    if(!open){
+                        open = true;
+                        openOptions();
+                    } else {
+                        open = false;
+                        closeOptions();
+                    }
+                });
+
+                window._globeTimeouts.push(setTimeout(function(){
+                    open = true;
+                    openOptions();
+                }, 3000));
+
+                createGlobe();
+            });
+        }
+    };
+
+    var wf = document.createElement('script');
+    wf.src = ('https:' == document.location.protocol ? 'https' : 'http') +
+        '://ajax.googleapis.com/ajax/libs/webfont/1.4.7/webfont.js';
+    wf.type = 'text/javascript';
+    wf.async = 'true';
+    var s = document.getElementsByTagName('script')[0];
+    s.parentNode.insertBefore(wf, s);
+}
