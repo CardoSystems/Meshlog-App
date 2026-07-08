@@ -27,3 +27,8 @@ dist-ssr
 architecture_review.md
 .agents
 tests/
+
+.wrangler/
+playwright.config.js
+scripts/
+test_tour.js
