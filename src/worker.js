@@ -74,7 +74,20 @@ export default {
 
 
 
-    // Serve static assets natively
-    return env.ASSETS.fetch(request);
+    // Serve static assets natively and inject analytics
+    const response = await env.ASSETS.fetch(request);
+    
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("text/html")) {
+      return new HTMLRewriter()
+        .on("body", {
+          element(element) {
+            element.append(`<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "4c77aeb4a657403ca8c0edca4fb2ed42"}'></script><!-- End Cloudflare Web Analytics -->`, { html: true });
+          }
+        })
+        .transform(response);
+    }
+
+    return response;
   }
 };

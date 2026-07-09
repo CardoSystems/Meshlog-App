@@ -3,9 +3,8 @@ Required Notice: Copyright (c) 2026 CardoSystems
 */
 import { registerSW } from 'virtual:pwa-register';
 import { initThreeBg, disposeThreeBg } from './src/three-bg.js';
-import { MeshDevice } from '@meshtastic/core';
-import { TransportWebSerial } from '@meshtastic/transport-web-serial';
-import { TransportWebBluetooth } from '@meshtastic/transport-web-bluetooth';
+// ponytail: native vite worker handling
+import ParserWorker from './parser.worker.js?worker';
 
 const updateSW = registerSW({
     onNeedRefresh() {
@@ -19,7 +18,7 @@ const updateSW = registerSW({
 
 // ponytail: nuclear cache-busting update checker
 let initHtml;
-fetch(`/?_=${Date.now()}`).then(r => r.text()).then(t => initHtml = t);
+try { fetch(`/?_=${Date.now()}`).then(r => r.text()).then(t => initHtml = t).catch(() => {}); } catch(e) {}
 setInterval(async () => {
     try {
         const t = await (await fetch(`/?_=${Date.now()}`, { cache: 'no-store' })).text();
@@ -41,6 +40,7 @@ const idb = {
 const escapeHTML = str => String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
 function getTurnstileToken() {
     return new Promise((resolve) => {
+        if (!navigator.onLine) return resolve('offline-bypass'); // ponytail: skip turnstile if offline
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             return resolve('test-bypass-token');
         }
@@ -64,6 +64,38 @@ function getTurnstileToken() {
     });
 }
 
+    // ponytail: native PWA install prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        const btn = document.getElementById('btn-install');
+        if (btn) {
+            btn.style.display = 'block';
+            btn.onclick = async () => {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') btn.style.display = 'none';
+                deferredPrompt = null;
+            };
+        }
+    });
+
+    // ponytail: native wake lock to keep screen alive
+    let wakeLock = null;
+    const requestWakeLock = async () => {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+                wakeLock.addEventListener('release', () => { wakeLock = null; });
+            }
+        } catch (err) {}
+    };
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
+    });
+    requestWakeLock();
+
 window.addEventListener('load', () => {
     initThreeBg();
     const tsEl = document.getElementById('build-timestamp');
@@ -71,7 +103,20 @@ window.addEventListener('load', () => {
         tsEl.innerText = "Build: " + __BUILD_TIMESTAMP__;
     }
 
-    worker = new Worker(new URL('./parser.worker.js', import.meta.url), { type: 'module' });
+    worker = new ParserWorker();
+
+    // ponytail: workbox broadcast update listener
+    const bc = new BroadcastChannel('api-updates');
+    bc.onmessage = (e) => {
+        if (e.data.type === 'CACHE_UPDATED') {
+            const toast = document.createElement('div');
+            toast.innerText = 'Map data updated in background. Click to reload.';
+            toast.style = 'position:fixed;bottom:20px;right:20px;background:#4caf50;color:#000;padding:10px;border-radius:5px;z-index:9999;font-weight:bold;cursor:pointer;';
+            toast.onclick = () => location.reload();
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 10000);
+        }
+    };
 
     const urlParams = new URLSearchParams(window.location.search);
     let mapId = urlParams.get('map');
@@ -92,7 +137,17 @@ window.addEventListener('load', () => {
 
     if (mapId) {
         document.getElementById('loading-text').innerText = "DOWNLOADING SHARED MAP...";
-        worker.postMessage({ cmd: 'start', id: mapId, origin: window.location.origin });
+        // ponytail: check IDB history first before network!
+        idb.get(`history_${mapId}`).then(localGraph => {
+            if (localGraph) {
+                document.getElementById('loading-spinner-container').style.display = 'flex';
+                document.getElementById('file-picker-container').style.display = 'none';
+                document.getElementById('loading-text').innerText = "RESTORING LOCAL HISTORY...";
+                setTimeout(() => initializeDashboard(localGraph), 100);
+            } else {
+                worker.postMessage({ cmd: 'start', id: mapId, origin: window.location.origin });
+            }
+        });
     } else {
         idb.get('autoSave').then(data => {
             if (data) {
@@ -101,9 +156,87 @@ window.addEventListener('load', () => {
                 document.getElementById('loading-text').innerText = "RESTORING LOCAL SESSION...";
                 setTimeout(() => initializeDashboard(data), 100);
             } else {
-                worker.postMessage({ cmd: 'start', id: null, origin: window.location.origin });
+                if (!navigator.onLine) {
+                    // ponytail: immediately show uploader if offline and no cache
+                    document.getElementById('loading-spinner-container').style.display = 'none';
+                    document.getElementById('file-picker-container').style.display = 'flex';
+                } else {
+                    worker.postMessage({ cmd: 'start', id: null, origin: window.location.origin });
+                }
             }
         });
+    }
+
+    // ponytail: observer to disable share button when offline
+    const updateOfflineState = async () => {
+        const isOffline = !navigator.onLine;
+        const shareBtn = document.getElementById('btn-share');
+        if (shareBtn) shareBtn.disabled = isOffline;
+        const banner = document.getElementById('offline-banner');
+        if (banner) banner.style.display = isOffline ? 'block' : 'none';
+
+        // ponytail: force dark mode map offline to avoid broken satellite tiles
+        if (window.leafletMap && window.leafletSatTiles && window.leafletDarkTiles) {
+            if (isOffline) {
+                window.leafletMap.removeLayer(window.leafletSatTiles);
+                window.leafletMap.addLayer(window.leafletDarkTiles);
+                const layersCtrl = document.querySelector('.leaflet-control-layers');
+                if (layersCtrl) layersCtrl.style.display = 'none';
+            } else {
+                const layersCtrl = document.querySelector('.leaflet-control-layers');
+                if (layersCtrl) layersCtrl.style.display = 'block';
+            }
+        }
+
+        if (!isOffline && worker) {
+            const pending = await idb.get('syncQueue');
+            if (pending) {
+                const token = await getTurnstileToken();
+                if (token && token !== 'offline-bypass') {
+                    worker.postMessage({ cmd: 'sync', graph: pending, turnstileToken: token, origin: window.location.origin });
+                    await idb.set('syncQueue', null);
+                }
+            }
+        }
+    };
+    window.addEventListener('online', updateOfflineState);
+    window.addEventListener('offline', updateOfflineState);
+    updateOfflineState();
+
+    // ponytail: hyper-focus cache on Portugal bounding box up to zoom 12 (~3500 tiles) progressively
+    if ('serviceWorker' in navigator) {
+        setTimeout(() => {
+            const lon2tile = (lon, z) => Math.floor((lon + 180) / 360 * Math.pow(2, z));
+            const lat2tile = (lat, z) => Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z));
+            
+            // Portugal Bounding Box
+            const nLat = 42.2, sLat = 36.9, wLon = -9.6, eLon = -6.1;
+            const tileQueue = [];
+            
+            // ponytail: hyper-focus cache on Portugal bounding box up to zoom 12 (~3500 tiles) progressively
+            const maxZ = parseInt(localStorage.getItem('offline_zoom_level') || '12', 10);
+            for(let z=0; z<=maxZ; z++) {
+                const xMin = lon2tile(wLon, z);
+                const xMax = lon2tile(eLon, z);
+                const yMin = lat2tile(nLat, z); // lower Y is higher Lat
+                const yMax = lat2tile(sLat, z);
+
+                for(let x=xMin; x<=xMax; x++) {
+                    for(let y=yMin; y<=yMax; y++) {
+                        tileQueue.push(`https://a.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`);
+                    }
+                }
+            }
+
+            const processQueue = async () => {
+                while(tileQueue.length > 0) {
+                    if (!navigator.onLine) { await new Promise(r=>setTimeout(r,5000)); continue; }
+                    fetch(tileQueue.shift(), {mode:'no-cors'}).catch(()=>{});
+                    await new Promise(r=>setTimeout(r,50)); // 50ms trickle to avoid network blasting
+                }
+            };
+            processQueue();
+        }, 3000);
     }
 
     // If loaded via a shared ?map= URL, the current URL is already shareable
@@ -122,7 +255,13 @@ window.addEventListener('load', () => {
 
     worker.onmessage = function (e) {
         if (e.data.type === 'DONE') {
+            if (e.data.pendingSync) {
+                idb.set('syncQueue', e.data.graphData);
+            }
             if (e.data.shareId) {
+                // ponytail: save full history
+                idb.set(`history_${e.data.shareId}`, e.data.graphData);
+                
                 window.history.replaceState({}, '', '?map=' + e.data.shareId);
                 navigator.clipboard.writeText(e.data.shortUrl || (window.location.origin + '?map=' + e.data.shareId)).catch(() => { });
                 const shareBtn = document.getElementById('btn-share');
@@ -170,6 +309,18 @@ window.addEventListener('load', () => {
                     console.error("Dashboard error", err);
                 }
             }, 100);
+        } else if (e.data.type === 'SYNC_DONE') {
+            window.history.replaceState({}, '', '?map=' + e.data.shareId);
+            const shareBtn = document.getElementById('btn-share');
+            if (shareBtn) {
+                shareBtn.style.display = '';
+                shareBtn.onclick = () => {
+                    navigator.clipboard.writeText(window.location.href).catch(() => { });
+                    const old = shareBtn.innerText;
+                    shareBtn.innerText = '✅ Copied!';
+                    setTimeout(() => shareBtn.innerText = old, 2000);
+                };
+            }
         } else if (e.data.type === 'NO_CACHE') {
             document.getElementById('loading-spinner-container').style.display = 'none';
             document.getElementById('file-picker-container').style.display = 'flex';
@@ -184,6 +335,34 @@ window.addEventListener('load', () => {
         if (!file) return;
         document.getElementById('file-picker-container').style.display = 'none';
         document.getElementById('loading-spinner-container').style.display = 'flex';
+        const token = await getTurnstileToken();
+        document.getElementById('loading-text').innerText = "NUCLEAR REACTOR 4 STARTING...";
+        worker.postMessage({ cmd: 'parse_file', file: file, origin: window.location.origin, turnstileToken: token });
+    });
+
+    // Global drag and drop support
+    document.body.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'copy';
+    });
+    
+    document.body.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
+
+        const mainContent = document.getElementById('main-content');
+        if (mainContent) {
+            mainContent.style.opacity = '0';
+            mainContent.style.pointerEvents = 'none';
+        }
+        document.getElementById('loading-screen').style.display = 'flex';
+        document.getElementById('loading-screen').style.opacity = '1';
+        document.getElementById('file-picker-container').style.display = 'none';
+        document.getElementById('loading-spinner-container').style.display = 'flex';
+
         const token = await getTurnstileToken();
         document.getElementById('loading-text').innerText = "NUCLEAR REACTOR 4 STARTING...";
         worker.postMessage({ cmd: 'parse_file', file: file, origin: window.location.origin, turnstileToken: token });
@@ -449,13 +628,43 @@ function initializeDashboard(graphData) {
         if (!window.d3Initialized) initD3Graph();
     });
 
+    // ponytail: settings modal logic
+    const btnSettings = document.getElementById('btn-settings');
+    const settingsModal = document.getElementById('settings-modal');
+    const btnSettingsClose = document.getElementById('btn-settings-close');
+    const settingZoom = document.getElementById('setting-zoom');
+    
+    if (btnSettings && settingsModal) {
+        settingZoom.value = localStorage.getItem('offline_zoom_level') || '12';
+        btnSettings.addEventListener('click', () => settingsModal.showModal());
+        btnSettingsClose.addEventListener('click', () => {
+            localStorage.setItem('offline_zoom_level', settingZoom.value);
+            settingsModal.close();
+            // trigger cache loop restart if they changed it
+            // (simplest is just to prompt them to reload)
+            if (confirm("Settings saved. Reload app to start caching new zoom levels?")) {
+                window.location.reload();
+            }
+        });
+    }
+
 
     // --- LEAFLET MAP LOGIC ---
+    // ponytail: fix broken marker icons offline by pointing to local public/images cache
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+        iconUrl: '/images/marker-icon.png',
+        iconRetinaUrl: '/images/marker-icon-2x.png',
+        shadowUrl: '/images/marker-shadow.png'
+    });
+
     const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 });
     const satTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
     
     const map = L.map('map', { layers: [darkTiles] }).setView([0, 0], 2);
     window.leafletMap = map;
+    window.leafletSatTiles = satTiles;
+    window.leafletDarkTiles = darkTiles;
     
     L.control.layers({ "Dark Mode": darkTiles, "Satellite": satTiles }).addTo(map);
     L.control.scale({ imperial: false, metric: true }).addTo(map);

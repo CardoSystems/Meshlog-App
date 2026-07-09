@@ -21,6 +21,7 @@ export default defineConfig({
         theme_color: '#0d1117',
         background_color: '#0d1117',
         display: 'standalone',
+        display_override: ['window-controls-overlay'],
         icons: [
           {
             src: 'icon.svg',
@@ -37,6 +38,10 @@ export default defineConfig({
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
+              broadcastUpdate: {
+                channelName: 'api-updates',
+                options: {}
+              },
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 7
@@ -103,12 +108,26 @@ export default defineConfig({
             }
           },
           {
+            urlPattern: /^https:\/\/(?:code\.jquery\.com|ajax\.googleapis\.com)\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'jquery-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
             urlPattern: /^https:\/\/[a-z]\.basemaps\.cartocdn\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'leaflet-tiles-cache',
               expiration: {
-                maxEntries: 500,
+                maxEntries: 4000,
                 maxAgeSeconds: 60 * 60 * 24 * 30
               },
               cacheableResponse: {

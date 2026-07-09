@@ -1,4 +1,5 @@
 export function disposeThreeBg() {
+    if (typeof $ === 'undefined') return;
     if(window._globeAnimationFrame) {
         cancelAnimationFrame(window._globeAnimationFrame);
     }
@@ -12,6 +13,7 @@ export function disposeThreeBg() {
 }
 
 export function initThreeBg() {
+    if (typeof $ === 'undefined') return;
     window._globeIntervals = [];
     window._globeTimeouts = [];
 

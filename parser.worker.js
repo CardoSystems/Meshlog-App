@@ -26,6 +26,21 @@ self.onmessage = async function(e) {
                 }
             }
 
+            if (e.data.cmd === 'sync') {
+                try {
+                    const cacheRes = await fetch(origin + '/api/cache', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ isDemo: false, graph: e.data.graph, token: e.data.turnstileToken })
+                    });
+                    if (cacheRes.ok) {
+                        const cacheData = await cacheRes.json();
+                        self.postMessage({ type: 'SYNC_DONE', shareId: cacheData.id, shortUrl: cacheData.shortUrl });
+                    }
+                } catch (err) {}
+                return;
+            }
+
             if (e.data.cmd === 'parse_file') {
                 try {
                     let text = await e.data.file.text();
@@ -339,7 +354,11 @@ self.onmessage = async function(e) {
                     console.error("Cache push failed", e);
                 }
                 
-                self.postMessage({ type: 'DONE', graphData: graph, shareId: shareId, shortUrl: shortUrl });
+                if (!shareId && e.data.cmd !== 'start_demo') {
+                    self.postMessage({ type: 'DONE', graphData: graph, pendingSync: true });
+                } else {
+                    self.postMessage({ type: 'DONE', graphData: graph, shareId: shareId, shortUrl: shortUrl });
+                }
                 } catch (err) {
                     self.postMessage({ type: 'ERROR', error: err.message });
                 }
