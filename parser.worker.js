@@ -14,7 +14,7 @@ self.onmessage = async function(e) {
                     const dataRes = await fetch(origin + dataUrl);
                     if (dataRes.ok) {
                         const graph = await dataRes.json();
-                        self.postMessage({ type: 'DONE', graphData: graph });
+                        self.postMessage({ type: 'DONE', graphData: graph, shareId: e.data.id });
                         return;
                     } else {
                         self.postMessage({ type: 'NO_CACHE' });
@@ -355,7 +355,8 @@ self.onmessage = async function(e) {
                 }
                 
                 if (!shareId && e.data.cmd !== 'start_demo') {
-                    self.postMessage({ type: 'DONE', graphData: graph, pendingSync: true });
+                    shareId = 'local_' + Math.random().toString(36).substring(2, 10);
+                    self.postMessage({ type: 'DONE', graphData: graph, shareId: shareId, pendingSync: true });
                 } else {
                     self.postMessage({ type: 'DONE', graphData: graph, shareId: shareId, shortUrl: shortUrl });
                 }

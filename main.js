@@ -349,6 +349,11 @@ window.addEventListener('load', () => {
             }, 100);
         } else if (e.data.type === 'SYNC_DONE') {
             window.history.replaceState({}, '', '?map=' + e.data.shareId);
+            if (typeof graphData !== 'undefined' && graphData) {
+                graphData.shareId = e.data.shareId;
+                idb.set('autoSave', graphData);
+                idb.set(`history_${e.data.shareId}`, graphData);
+            }
             setupShareButton();
         } else if (e.data.type === 'NO_CACHE') {
             document.getElementById('loading-spinner-container').style.display = 'none';
@@ -952,7 +957,11 @@ function initializeDashboard(graphData) {
 
         document.addEventListener('copyNodeLink', (e) => {
             const nodeId = e.detail;
-            const link = window.location.origin + window.location.pathname + window.location.search + '#node=' + nodeId;
+            let searchStr = window.location.search;
+            if (!searchStr && typeof graphData !== 'undefined' && graphData && graphData.shareId) {
+                searchStr = '?map=' + graphData.shareId;
+            }
+            const link = window.location.origin + window.location.pathname + searchStr + '#node=' + nodeId;
             navigator.clipboard.writeText(link).then(() => {
                 const toast = document.createElement('div');
                 toast.innerText = 'Copied to clipboard!';
