@@ -28,6 +28,7 @@ const updateSW = registerSW({
 
 let worker;
 // ponytail: lazy raw IDB wrapper, skip idb-keyval dep
+
 const idb = {
     open: () => new Promise(r => { let q = indexedDB.open('m_db',1); q.onupgradeneeded = () => q.result.createObjectStore('kv'); q.onsuccess = () => r(q.result); }),
     get: async k => new Promise(async r => { (await idb.open()).transaction('kv').objectStore('kv').get(k).onsuccess = e => r(e.target.result); }),
@@ -519,9 +520,8 @@ function initializeDashboard(graphData) {
     const navToggle = document.getElementById('nav-toggle');
     const viewControls = document.getElementById('view-controls');
     const hasSeenTour = localStorage.getItem('tour_global_seen');
-    if (navToggle && window.innerWidth <= 768) {
-        navToggle.style.display = 'block';
-        if (hasSeenTour) {
+    if (navToggle) {
+        if (hasSeenTour && window.innerWidth <= 768) {
             viewControls.classList.add('collapsed'); // start collapsed on mobile if onboarded
             navToggle.textContent = '▾'; // pointing down to expand
         } else {
@@ -614,12 +614,8 @@ function initializeDashboard(graphData) {
     if (!window._resizeAttached) {
         window._resizeAttached = true;
         window.addEventListener('resize', () => {
-            const nToggle = document.getElementById('nav-toggle');
             const vControls = document.getElementById('view-controls');
-            if (window.innerWidth <= 768) {
-                if (nToggle) nToggle.style.display = 'block';
-            } else {
-                if (nToggle) nToggle.style.display = 'none';
+            if (window.innerWidth > 768) {
                 if (vControls) vControls.classList.remove('collapsed');
             }
         });
@@ -672,6 +668,7 @@ function initializeDashboard(graphData) {
             
             btnCheckUpdates.innerText = 'Checking...';
             try {
+                // 1. Standard PWA update
                 const reg = await navigator.serviceWorker.getRegistration();
                 if (reg) await reg.update();
                 
@@ -685,7 +682,7 @@ function initializeDashboard(graphData) {
                             }
                         }, 4000);
                     }
-                }, 2500);
+                }, 2000);
             } catch(e) {
                 btnCheckUpdates.innerText = 'Error';
                 setTimeout(() => { 
@@ -700,9 +697,39 @@ function initializeDashboard(graphData) {
 
     const btnResetTours = document.getElementById('btn-reset-tours');
     
+    const settingD3Spread = document.getElementById('setting-d3-spread');
+    const btnResetSpread = document.getElementById('btn-reset-spread');
+    
+    if (settingD3Spread) {
+        settingD3Spread.value = localStorage.getItem('d3_spread') || '-300';
+        settingD3Spread.addEventListener('input', (e) => {
+            const val = e.target.value;
+            localStorage.setItem('d3_spread', val);
+            if (window.d3Simulation) {
+                window.d3Simulation.force("charge").strength(parseInt(val));
+                window.d3Simulation.alpha(1).restart();
+            }
+        });
+    }
+
+    if (btnResetSpread && settingD3Spread) {
+        btnResetSpread.addEventListener('click', () => {
+            settingD3Spread.value = '-300';
+            localStorage.setItem('d3_spread', '-300');
+            if (window.d3Simulation) {
+                window.d3Simulation.force("charge").strength(-300);
+                window.d3Simulation.alpha(1).restart();
+            }
+        });
+    }
+
     if (btnSettings && settingsModal) {
-        settingZoom.value = localStorage.getItem('offline_zoom_level') || '10';
-        settingDisableTours.checked = localStorage.getItem('disable_tours') === 'true';
+        btnSettings.addEventListener('click', () => {
+            settingZoom.value = localStorage.getItem('offline_zoom_level') || '10';
+            settingDisableTours.checked = localStorage.getItem('disable_tours') === 'true';
+            if (settingD3Spread) settingD3Spread.value = localStorage.getItem('d3_spread') || '-300';
+            settingsModal.showModal();
+        });
 
         btnResetTours.addEventListener('click', () => {
             localStorage.removeItem('tour_global_seen');
@@ -712,7 +739,6 @@ function initializeDashboard(graphData) {
             alert("Tutorial progress reset! The guided tours will show again.");
         });
 
-        btnSettings.addEventListener('click', () => settingsModal.showModal());
         btnSettingsClose.addEventListener('click', () => {
             const oldZ = localStorage.getItem('offline_zoom_level') || '10';
             localStorage.setItem('offline_zoom_level', settingZoom.value);
@@ -1104,7 +1130,7 @@ function initializeDashboard(graphData) {
 
         const simulation = d3.forceSimulation(d3Nodes)
             .force("link", d3.forceLink(d3Links).id(d => d.id).distance(80))
-            .force("charge", d3.forceManyBody().strength(-300))
+            .force("charge", d3.forceManyBody().strength(parseInt(localStorage.getItem('d3_spread') || '-300')))
             .force("center", d3.forceCenter(width / 2, height / 2))
             .force("collide", d3.forceCollide().radius(d => (d.short_name === 'NXTW' ? 20 : 10) + 15));
 

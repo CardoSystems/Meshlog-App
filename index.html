@@ -278,9 +278,9 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <button id="btn-share"
                 style="display:none; background: #3f51b5; border-color: #3f51b5; color: white; cursor: pointer; font-weight: bold;">🔗
                 Share Map</button>
-            <button id="nav-toggle" style="display:none;">☰</button>
             <input type="file" id="dashboard-upload-input" accept=".txt" style="display: none;">
         </div>
+        <button id="nav-toggle" class="mobile-only">☰</button>
         <div id="views">
             <div id="map"></div>
             <div id="d3-container">
@@ -416,6 +416,14 @@ Required Notice: Copyright (c) 2026 CardoSystems
                 <progress id="cache-progress" value="0" max="100" style="width: 100%; height: 8px; border-radius: 4px;"></progress>
                 <div id="cache-stats" style="font-size: 10px; color: #888; text-align: right; margin-top: 2px;">0 / 0 tiles</div>
             </div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <label style="font-size: 12px; color: #aaa;">Network Node Spread</label>
+                <button id="btn-reset-spread" style="background: transparent; border: 1px solid #555; color: #aaa; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 10px;">Reset</button>
+            </div>
+            <input type="range" id="setting-d3-spread" min="-1000" max="-50" value="-300" style="width: 100%; accent-color: #00bcd4;">
         </div>
 
         <div style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">

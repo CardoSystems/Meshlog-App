@@ -47,6 +47,7 @@ body { margin: 0; padding: 0; background-color: #111; color: #fff; font-family: 
         .leaflet-control-layers-list input[type="radio"] { margin-right: 10px; accent-color: #00bcd4; cursor: pointer; }
         .offline-disabled-layer { opacity: 0.3; pointer-events: none; }
         
+        #nav-toggle { display: none !important; }
         @media (max-width: 768px) {
             #main-content { flex-direction: column; }
             body.panel-open #view-controls { display: none !important; }
@@ -59,11 +60,11 @@ body { margin: 0; padding: 0; background-color: #111; color: #fff; font-family: 
                 padding: 10px; padding-bottom: 25px; z-index: 100001 !important; 
                 background: rgba(20, 20, 20, 0.97); border: 1px solid #444;
                 box-shadow: 0 4px 10px rgba(0,0,0,0.8);
-                transition: max-height 0.3s ease, padding 0.3s ease; overflow: hidden; max-height: 500px;
+                transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease; overflow: hidden; max-height: 500px;
             }
-            #view-controls.collapsed { max-height: 0px; padding-top: 0; padding-bottom: 25px; border-color: transparent; background: transparent; box-shadow: none; overflow: visible; }
-            #view-controls.collapsed > *:not(#nav-toggle) { opacity: 0; pointer-events: none; }
+            #view-controls.collapsed { max-height: 0px; padding: 0; border: none; background: transparent; box-shadow: none; opacity: 0; pointer-events: none; }
             #nav-toggle { display: flex !important; align-items: center; justify-content: center; position: fixed !important; top: 15px !important; right: 15px !important; left: auto !important; width: 44px !important; height: 44px !important; background: rgba(34,34,34,0.9) !important; color: #fff !important; font-size: 24px; padding: 0 !important; border-radius: 8px !important; border: 1px solid #444 !important; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 100005; }
+            .leaflet-top.leaflet-right { top: 60px !important; }
             #view-controls button { padding: 10px 5px; font-size: 13px; margin: 0; }
             #btn-tutorial, #btn-settings, #btn-share, #node-search { grid-column: span 2; }
             #view-controls span { grid-column: span 2; width: 100%; text-align: center; margin-top: 5px; padding-right: 0; color: #ccc; }
@@ -120,7 +121,6 @@ body { margin: 0; padding: 0; background-color: #111; color: #fff; font-family: 
         .legend { margin-top: auto; padding-top: 20px; border-top: 1px solid #444; font-size: 12px; color: #aaa; }
         .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
         .legend-color { width: 15px; height: 15px; border-radius: 3px; margin-right: 10px; }
-
         /* Terminal Window */
         #terminal-container {
             background: #1e1e1e; color: #d4d4d4; 
