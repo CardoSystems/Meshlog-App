@@ -173,6 +173,7 @@ window.addEventListener('load', () => {
     } else {
         idb.get('autoSave').then(data => {
             if (data) {
+                if (data.shareId) window.history.replaceState({}, '', '?map=' + data.shareId);
                 document.getElementById('loading-spinner-container').style.display = 'flex';
                 document.getElementById('file-picker-container').style.display = 'none';
                 document.getElementById('loading-text').innerText = "RESTORING LOCAL SESSION...";
@@ -314,6 +315,9 @@ window.addEventListener('load', () => {
                     setTimeout(() => btn.innerText = "Upload Log", 2000);
                 }
             }
+
+            // Inject shareId so autoSave remembers the URL
+            if (e.data.shareId) e.data.graphData.shareId = e.data.shareId;
 
             // If offline local upload inside existing dashboard, tear down old map
             const mapEl = document.getElementById('map');
