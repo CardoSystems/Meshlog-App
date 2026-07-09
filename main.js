@@ -6,29 +6,25 @@ import { initThreeBg, disposeThreeBg } from './src/three-bg.js';
 // ponytail: native vite worker handling
 import ParserWorker from './parser.worker.js?worker';
 
+window.updatePending = false;
 const updateSW = registerSW({
     onNeedRefresh() {
-        console.log("New version detected. Forcing update...");
-        updateSW(true);
+        console.log("New version detected.");
+        window.updatePending = true;
+        const btnCheckUpdates = document.getElementById('btn-check-updates');
+        if (btnCheckUpdates) {
+            btnCheckUpdates.innerText = 'Install Update';
+            btnCheckUpdates.style.background = '#e91e63';
+        }
+        if (confirm("A new version is available! Refresh now to apply the update?")) {
+            updateSW(true);
+        }
     },
     onOfflineReady() {
         console.log("App ready to work offline.");
     },
 });
 
-// ponytail: nuclear cache-busting update checker
-let initHtml;
-try { fetch(`/?_=${Date.now()}`).then(r => r.text()).then(t => initHtml = t).catch(() => {}); } catch(e) {}
-setInterval(async () => {
-    try {
-        const t = await (await fetch(`/?_=${Date.now()}`, { cache: 'no-store' })).text();
-        if (initHtml && t !== initHtml) {
-            (await navigator.serviceWorker.getRegistration())?.unregister();
-            (await caches.keys()).forEach(k => caches.delete(k));
-            location.reload();
-        }
-    } catch(e) {}
-}, 60000);
 
 let worker;
 // ponytail: lazy raw IDB wrapper, skip idb-keyval dep
@@ -176,15 +172,19 @@ window.addEventListener('load', () => {
         if (banner) banner.style.display = isOffline ? 'block' : 'none';
 
         // ponytail: force dark mode map offline to avoid broken satellite tiles
-        if (window.leafletMap && window.leafletSatTiles && window.leafletDarkTiles) {
+        if (window.leafletMap) {
             if (isOffline) {
-                window.leafletMap.removeLayer(window.leafletSatTiles);
-                window.leafletMap.addLayer(window.leafletDarkTiles);
-                const layersCtrl = document.querySelector('.leaflet-control-layers');
-                if (layersCtrl) layersCtrl.style.display = 'none';
+                // We don't remove other layers automatically because the map might not be visible,
+                // but we disable them in the control
+                document.querySelectorAll('.leaflet-control-layers-list label').forEach(el => {
+                    if (!el.innerText.includes('Offline')) {
+                        el.classList.add('offline-disabled-layer');
+                    }
+                });
             } else {
-                const layersCtrl = document.querySelector('.leaflet-control-layers');
-                if (layersCtrl) layersCtrl.style.display = 'block';
+                document.querySelectorAll('.leaflet-control-layers-list label').forEach(el => {
+                    el.classList.remove('offline-disabled-layer');
+                });
             }
         }
 
@@ -214,7 +214,7 @@ window.addEventListener('load', () => {
             const tileQueue = [];
             
             // ponytail: hyper-focus cache on Portugal bounding box up to zoom 12 (~3500 tiles) progressively
-            const maxZ = parseInt(localStorage.getItem('offline_zoom_level') || '12', 10);
+            const maxZ = parseInt(localStorage.getItem('offline_zoom_level') || '10', 10);
             for(let z=0; z<=maxZ; z++) {
                 const xMin = lon2tile(wLon, z);
                 const xMax = lon2tile(eLon, z);
@@ -228,10 +228,36 @@ window.addEventListener('load', () => {
                 }
             }
 
+            const totalTiles = tileQueue.length;
+            const startTime = Date.now();
+            let tilesDone = 0;
+
             const processQueue = async () => {
                 while(tileQueue.length > 0) {
                     if (!navigator.onLine) { await new Promise(r=>setTimeout(r,5000)); continue; }
                     fetch(tileQueue.shift(), {mode:'no-cors'}).catch(()=>{});
+                    tilesDone++;
+                    
+                    const pBar = document.getElementById('cache-progress');
+                    const pStats = document.getElementById('cache-stats');
+                    const pEta = document.getElementById('cache-eta');
+                    if (pBar && pStats && pEta) {
+                        pBar.max = totalTiles;
+                        pBar.value = tilesDone;
+                        pStats.innerText = `${tilesDone} / ${totalTiles} tiles`;
+                        
+                        if (tilesDone > 5 && tileQueue.length > 0) {
+                            const elapsed = Date.now() - startTime;
+                            const msPerTile = elapsed / tilesDone;
+                            const remaining = tileQueue.length * msPerTile;
+                            const sec = Math.floor(remaining / 1000);
+                            pEta.innerText = sec > 60 ? `ETA: ${Math.floor(sec/60)}m ${sec%60}s` : `ETA: ${sec}s`;
+                        } else if (tileQueue.length === 0) {
+                            pEta.innerText = 'Completed';
+                            pEta.style.color = '#4caf50';
+                        }
+                    }
+
                     await new Promise(r=>setTimeout(r,50)); // 50ms trickle to avoid network blasting
                 }
             };
@@ -603,7 +629,7 @@ function initializeDashboard(graphData) {
         btnSidebar.classList.add('active'); btnMap.classList.remove('active'); btnNet.classList.remove('active');
         mapDiv.style.display = 'none'; d3Div.style.display = 'none';
         sidebarDiv.style.display = 'flex';
-        if (window.runUnmappedTour && !localStorage.getItem('tour_unmapped_seen')) {
+        if (window.runUnmappedTour && !localStorage.getItem('tour_unmapped_seen') && localStorage.getItem('disable_tours') !== 'true') {
             setTimeout(() => window.runUnmappedTour(), 200);
         }
     });
@@ -613,7 +639,7 @@ function initializeDashboard(graphData) {
         mapDiv.style.display = 'block'; d3Div.style.display = 'none';
         sidebarDiv.style.display = 'none';
         setTimeout(() => map.invalidateSize(), 100);
-        if (window.runMapTour && !localStorage.getItem('tour_map_seen') && localStorage.getItem('tour_global_seen')) {
+        if (window.runMapTour && !localStorage.getItem('tour_map_seen') && localStorage.getItem('tour_global_seen') && localStorage.getItem('disable_tours') !== 'true') {
             setTimeout(() => window.runMapTour(), 200);
         }
     });
@@ -622,7 +648,7 @@ function initializeDashboard(graphData) {
         btnNet.classList.add('active'); btnMap.classList.remove('active'); btnSidebar.classList.remove('active');
         mapDiv.style.display = 'none'; d3Div.style.display = 'block';
         sidebarDiv.style.display = 'none';
-        if (window.runNetTour && !localStorage.getItem('tour_net_seen')) {
+        if (window.runNetTour && !localStorage.getItem('tour_net_seen') && localStorage.getItem('disable_tours') !== 'true') {
             setTimeout(() => window.runNetTour(), 200);
         }
         if (!window.d3Initialized) initD3Graph();
@@ -633,16 +659,67 @@ function initializeDashboard(graphData) {
     const settingsModal = document.getElementById('settings-modal');
     const btnSettingsClose = document.getElementById('btn-settings-close');
     const settingZoom = document.getElementById('setting-zoom');
+    const settingDisableTours = document.getElementById('setting-disable-tours');
+    const btnCheckUpdates = document.getElementById('btn-check-updates');
+    if (btnCheckUpdates) {
+        btnCheckUpdates.addEventListener('click', async () => {
+            if (window.updatePending) {
+                if (confirm("Refresh now to apply the update?")) {
+                    updateSW(true);
+                }
+                return;
+            }
+            
+            btnCheckUpdates.innerText = 'Checking...';
+            try {
+                const reg = await navigator.serviceWorker.getRegistration();
+                if (reg) await reg.update();
+                
+                setTimeout(() => {
+                    if (!window.updatePending) {
+                        btnCheckUpdates.innerText = 'Up to date!';
+                        setTimeout(() => { 
+                            if (!window.updatePending) {
+                                btnCheckUpdates.innerText = 'Search';
+                                btnCheckUpdates.style.background = '#3f51b5';
+                            }
+                        }, 4000);
+                    }
+                }, 2500);
+            } catch(e) {
+                btnCheckUpdates.innerText = 'Error';
+                setTimeout(() => { 
+                    if (!window.updatePending) {
+                        btnCheckUpdates.innerText = 'Search'; 
+                        btnCheckUpdates.style.background = '#3f51b5';
+                    }
+                }, 4000);
+            }
+        });
+    }
+
+    const btnResetTours = document.getElementById('btn-reset-tours');
     
     if (btnSettings && settingsModal) {
-        settingZoom.value = localStorage.getItem('offline_zoom_level') || '12';
+        settingZoom.value = localStorage.getItem('offline_zoom_level') || '10';
+        settingDisableTours.checked = localStorage.getItem('disable_tours') === 'true';
+
+        btnResetTours.addEventListener('click', () => {
+            localStorage.removeItem('tour_global_seen');
+            localStorage.removeItem('tour_map_seen');
+            localStorage.removeItem('tour_net_seen');
+            localStorage.removeItem('tour_unmapped_seen');
+            alert("Tutorial progress reset! The guided tours will show again.");
+        });
+
         btnSettings.addEventListener('click', () => settingsModal.showModal());
         btnSettingsClose.addEventListener('click', () => {
+            const oldZ = localStorage.getItem('offline_zoom_level') || '10';
             localStorage.setItem('offline_zoom_level', settingZoom.value);
+            localStorage.setItem('disable_tours', settingDisableTours.checked ? 'true' : 'false');
             settingsModal.close();
-            // trigger cache loop restart if they changed it
-            // (simplest is just to prompt them to reload)
-            if (confirm("Settings saved. Reload app to start caching new zoom levels?")) {
+            
+            if (oldZ !== settingZoom.value && confirm("Zoom setting saved. Reload app to start caching new zoom levels?")) {
                 window.location.reload();
             }
         });
@@ -658,15 +735,34 @@ function initializeDashboard(graphData) {
         shadowUrl: '/images/marker-shadow.png'
     });
 
-    const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 });
+    const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', maxZoom: 19 });
     const satTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
+    const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 });
+    const topoTiles = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap', maxZoom: 17 });
+    const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
     
     const map = L.map('map', { layers: [darkTiles] }).setView([0, 0], 2);
     window.leafletMap = map;
-    window.leafletSatTiles = satTiles;
-    window.leafletDarkTiles = darkTiles;
     
-    L.control.layers({ "Dark Mode": darkTiles, "Satellite": satTiles }).addTo(map);
+    const baseMaps = {
+        "Carto Dark (Offline Cache)": darkTiles,
+        "OpenStreetMap": osmTiles,
+        "Open TOPO": topoTiles,
+        "ESRI World TOPO": esriTopo,
+        "ESRI Satellite": satTiles
+    };
+    L.control.layers(baseMaps).addTo(map);
+    
+    // Disable online-only maps if offline
+    if (!navigator.onLine) {
+        setTimeout(() => {
+            document.querySelectorAll('.leaflet-control-layers-list label').forEach(el => {
+                if (!el.innerText.includes('Offline')) {
+                    el.classList.add('offline-disabled-layer');
+                }
+            });
+        }, 100);
+    }
     L.control.scale({ imperial: false, metric: true }).addTo(map);
     
     // On mobile the layout isn't fully settled at map creation time — force a size recalc

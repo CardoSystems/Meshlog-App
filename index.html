@@ -197,16 +197,6 @@ Required Notice: Copyright (c) 2026 CardoSystems
                 <button id="btn-install"
                     style="display:none; flex: 1; text-align: center; background: rgba(255, 152, 0, 0.1); border: 1px solid rgba(255, 152, 0, 0.5); padding: 10px; border-radius: 8px; color: #ff9800; font-weight: bold; cursor: pointer;">Install App</button>
             </div>
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button id="btn-connect-usb"
-                    style="flex: 1; text-align: center; background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; color: #fff; text-decoration: none; font-weight: bold; transition: all 0.2s; cursor: pointer;"
-                    onmouseover="this.style.background='rgba(255,255,255,0.1)'"
-                    onmouseout="this.style.background='rgba(255,255,255,0.05)'">Connect USB</button>
-                <button id="btn-connect-ble"
-                    style="flex: 1; text-align: center; background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; color: #fff; text-decoration: none; font-weight: bold; transition: all 0.2s; cursor: pointer;"
-                    onmouseover="this.style.background='rgba(255,255,255,0.1)'"
-                    onmouseout="this.style.background='rgba(255,255,255,0.05)'">Connect Bluetooth</button>
-            </div>
             <div id="recent-maps" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px;"></div>
         </div>
         <div id="loading-spinner-container" style="display: flex; flex-direction: column; align-items: center;">
@@ -288,7 +278,7 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <button id="btn-share"
                 style="display:none; background: #3f51b5; border-color: #3f51b5; color: white; cursor: pointer; font-weight: bold;">🔗
                 Share Map</button>
-            <button id="nav-toggle" style="display:none;">▴</button>
+            <button id="nav-toggle" style="display:none;">☰</button>
             <input type="file" id="dashboard-upload-input" accept=".txt" style="display: none;">
         </div>
         <div id="views">
@@ -321,8 +311,6 @@ Required Notice: Copyright (c) 2026 CardoSystems
         <div id="terminal-container">
             <div id="terminal-header" style="position: relative;">
                 <div id="signature-block" style="position: absolute; left: 50%; transform: translateX(-50%); text-align: center; font-size: 11px; color: #888; display: flex; flex-direction: row; gap: 10px; align-items: center; white-space: nowrap; z-index: 0; pointer-events: none;">
-                    <span>(made with ❤️ by NXDOMAIN)</span>
-                    <span id="build-timestamp" style="font-size: 9px; opacity: 0.6;"></span>
                     <button id="terminal-toggle-mobile" class="term-toggle" title="Toggle terminal" style="display:none; pointer-events:auto; background:#333; border:1px solid #555; color:#fff; font-size:16px; cursor:pointer; padding:2px 10px; border-radius:4px; line-height:1;">▾</button>
                 </div>
                 <div id="terminal-header-row1">
@@ -407,19 +395,50 @@ Required Notice: Copyright (c) 2026 CardoSystems
         </div>
     </aside>
     <!-- Native Settings Dialog -->
-    <dialog id="settings-modal" style="background: #222; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-        <h3 style="margin-top: 0;">App Settings</h3>
-        <div style="margin-bottom: 20px;">
-            <label style="display: block; font-size: 12px; color: #aaa; margin-bottom: 5px;">Offline Tile Cache Detail (Zoom Level)</label>
-            <select id="setting-zoom" style="background: #333; color: #fff; border: 1px solid #555; padding: 6px; border-radius: 4px; width: 100%;">
-                <option value="10">Level 10 (Towns - Fast, 350 tiles)</option>
-                <option value="12" selected>Level 12 (Streets - Recommended, 3500 tiles)</option>
+    <dialog id="settings-modal" style="background: #222; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); width: 320px; max-width: 90vw; max-height: 85vh; overflow-y: auto;">
+        <h3 style="margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px;">App Settings</h3>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; font-size: 12px; color: #aaa; margin-bottom: 5px;">Offline Tile Cache Detail</label>
+            <select id="setting-zoom" style="background: #333; color: #fff; border: 1px solid #555; padding: 6px; border-radius: 4px; width: 100%; outline: none;">
+                <option value="10" selected>Level 10 (Towns - Fast, 350 tiles)</option>
+                <option value="12">Level 12 (Streets - Recommended, 3500 tiles)</option>
                 <option value="13">Level 13 (High Detail - Slow, 14000 tiles)</option>
                 <option value="14">Level 14 (Ultra - Danger, 56000 tiles)</option>
             </select>
-            <p style="font-size: 10px; color: #f44336; margin-top: 5px;">Warning: >12 may cause CDN bans or storage quota errors.</p>
+            <p style="font-size: 10px; color: #f44336; margin-top: 5px; margin-bottom: 10px;">Warning: >12 may cause CDN bans or storage errors.</p>
+            
+            <div style="background: #111; padding: 10px; border-radius: 4px; border: 1px solid #333;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px;">
+                    <span style="color: #00bcd4;">Background Cache</span>
+                    <span id="cache-eta" style="color: #aaa;">Calculating...</span>
+                </div>
+                <progress id="cache-progress" value="0" max="100" style="width: 100%; height: 8px; border-radius: 4px;"></progress>
+                <div id="cache-stats" style="font-size: 10px; color: #888; text-align: right; margin-top: 2px;">0 / 0 tiles</div>
+            </div>
         </div>
-        <div style="text-align: right;">
+
+        <div style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+            <label style="font-size: 12px; color: #aaa;">Disable Auto-Tours</label>
+            <input type="checkbox" id="setting-disable-tours" style="transform: scale(1.2); cursor: pointer;">
+        </div>
+
+        <div style="margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
+            <label style="font-size: 12px; color: #aaa;">Reset Tutorial Progress</label>
+            <button id="btn-reset-tours" style="background: #e91e63; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Reset Now</button>
+        </div>
+
+        <div style="margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
+            <label style="font-size: 12px; color: #aaa;">Check for App Updates</label>
+            <button id="btn-check-updates" style="background: #3f51b5; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Search</button>
+        </div>
+
+        <div style="text-align: center; font-size: 11px; color: #888; margin-bottom: 15px;">
+            <span>(made with ❤️ by NXDOMAIN)</span><br>
+            <span id="build-timestamp" style="font-size: 9px; opacity: 0.6;"></span>
+        </div>
+
+        <div style="text-align: right; border-top: 1px solid #444; padding-top: 15px;">
             <button id="btn-settings-close" style="background: #4caf50; border: none; color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Save & Close</button>
         </div>
     </dialog>

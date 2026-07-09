@@ -40,6 +40,13 @@ body { margin: 0; padding: 0; background-color: #111; color: #fff; font-family: 
         .leaflet-container a { color: #00bcd4; }
         .popup-header { font-size: 16px; font-weight: bold; color: #4caf50; margin-bottom: 5px; border-bottom: 1px solid #555; padding-bottom: 5px; }
         
+        .leaflet-control-layers { background: #2b2b36 !important; border: 1px solid #444 !important; border-radius: 8px !important; color: #fff !important; box-shadow: 0 4px 15px rgba(0,0,0,0.8) !important; }
+        .leaflet-control-layers-expanded { padding: 10px !important; min-width: 200px; }
+        .leaflet-control-layers-list label { display: block; padding: 8px 10px; margin: 0; cursor: pointer; border-radius: 4px; transition: background 0.2s; font-size: 14px; }
+        .leaflet-control-layers-list label:hover { background: #3f3f4a; }
+        .leaflet-control-layers-list input[type="radio"] { margin-right: 10px; accent-color: #00bcd4; cursor: pointer; }
+        .offline-disabled-layer { opacity: 0.3; pointer-events: none; }
+        
         @media (max-width: 768px) {
             #main-content { flex-direction: column; }
             body.panel-open #view-controls { display: none !important; }
@@ -56,9 +63,9 @@ body { margin: 0; padding: 0; background-color: #111; color: #fff; font-family: 
             }
             #view-controls.collapsed { max-height: 0px; padding-top: 0; padding-bottom: 25px; border-color: transparent; background: transparent; box-shadow: none; overflow: visible; }
             #view-controls.collapsed > *:not(#nav-toggle) { opacity: 0; pointer-events: none; }
-            #nav-toggle { display: flex !important; align-items: center; justify-content: center; position: absolute !important; top: 100px !important; right: -1px !important; left: auto !important; width: 34px !important; height: 34px !important; background: #00bcd4 !important; color: #000 !important; font-size: 32px; padding: 0 !important; border-radius: 4px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 100005; }
+            #nav-toggle { display: flex !important; align-items: center; justify-content: center; position: fixed !important; top: 15px !important; right: 15px !important; left: auto !important; width: 44px !important; height: 44px !important; background: rgba(34,34,34,0.9) !important; color: #fff !important; font-size: 24px; padding: 0 !important; border-radius: 8px !important; border: 1px solid #444 !important; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 100005; }
             #view-controls button { padding: 10px 5px; font-size: 13px; margin: 0; }
-            #btn-tutorial, #btn-share, #node-search { grid-column: span 2; }
+            #btn-tutorial, #btn-settings, #btn-share, #node-search { grid-column: span 2; }
             #view-controls span { grid-column: span 2; width: 100%; text-align: center; margin-top: 5px; padding-right: 0; color: #ccc; }
             
             /* Two-row terminal on mobile */
