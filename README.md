@@ -7,7 +7,7 @@
 ---
 
 <div align="center">
-  <img src="architecture.png" alt="Meshlog Architecture Diagram" width="800">
+  <img src="canvas.png" alt="Meshlog Architecture Diagram" width="800">
 </div>
 
 ---
