@@ -57,12 +57,13 @@ body { margin: 0; padding: 0; background-color: #111; color: #fff; font-family: 
             #view-controls { 
                 top: 10px; right: 10px; left: 10px; width: auto; 
                 display: grid; grid-template-columns: 1fr 1fr; gap: 8px; 
-                padding: 10px; padding-bottom: 25px; z-index: 100001 !important; 
+                padding: 10px; padding-right: 60px; padding-bottom: 25px; z-index: 100001 !important; 
                 background: rgba(20, 20, 20, 0.97); border: 1px solid #444;
                 box-shadow: 0 4px 10px rgba(0,0,0,0.8);
                 transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease; overflow: hidden; max-height: 500px;
             }
             #view-controls.collapsed { max-height: 0px; padding: 0; border: none; background: transparent; box-shadow: none; opacity: 0; pointer-events: none; }
+            #view-controls:not(.collapsed) ~ #views .leaflet-control-container { display: none; }
             #nav-toggle { display: flex !important; align-items: center; justify-content: center; position: fixed !important; top: 15px !important; right: 15px !important; left: auto !important; width: 44px !important; height: 44px !important; background: rgba(34,34,34,0.9) !important; color: #fff !important; font-size: 24px; padding: 0 !important; border-radius: 8px !important; border: 1px solid #444 !important; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 100005; }
             .leaflet-top.leaflet-right { top: 60px !important; }
             #view-controls button { padding: 10px 5px; font-size: 13px; margin: 0; }
@@ -95,6 +96,7 @@ body { margin: 0; padding: 0; background-color: #111; color: #fff; font-family: 
             /* Analytics panel covers whole screen on mobile */
             #node-analytics-panel { width: 100vw; max-width: 100vw; right: -100vw; }
             #node-analytics-panel.open { right: 0; }
+            #node-analytics-panel #close-panel { left: 12px; right: auto; }
             
             /* File picker loading screen adjustments */
             #file-picker-container { padding: 0 20px; }
@@ -109,6 +111,9 @@ body { margin: 0; padding: 0; background-color: #111; color: #fff; font-family: 
                 margin-bottom: 10px !important;
             }
             .driver-overlay { z-index: 99999 !important; }
+        }
+        @media (max-width: 400px) {
+            #build-timestamp { display: none !important; }
         }
         
         #d3-tooltip {

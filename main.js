@@ -35,6 +35,31 @@ const idb = {
     set: async (k,v) => new Promise(async r => { (await idb.open()).transaction('kv','readwrite').objectStore('kv').put(v,k).onsuccess = r; })
 };
 const escapeHTML = str => String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+
+// ponytail: shared helpers
+function setupShareButton() {
+    const shareBtn = document.getElementById('btn-share');
+    if (!shareBtn) return;
+    shareBtn.style.display = '';
+    shareBtn.onclick = () => {
+        navigator.clipboard.writeText(window.location.href).catch(() => { });
+        const old = shareBtn.innerText;
+        shareBtn.innerText = '✅ Copied!';
+        setTimeout(() => shareBtn.innerText = old, 2000);
+    };
+}
+
+function showLoadingScreen() {
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+        mainContent.style.opacity = '0';
+        mainContent.style.pointerEvents = 'none';
+    }
+    document.getElementById('loading-screen').style.display = 'flex';
+    document.getElementById('loading-screen').style.opacity = '1';
+    document.getElementById('file-picker-container').style.display = 'none';
+    document.getElementById('loading-spinner-container').style.display = 'flex';
+}
 function getTurnstileToken() {
     return new Promise((resolve) => {
         if (!navigator.onLine) return resolve('offline-bypass'); // ponytail: skip turnstile if offline
@@ -224,7 +249,7 @@ window.addEventListener('load', () => {
 
                 for(let x=xMin; x<=xMax; x++) {
                     for(let y=yMin; y<=yMax; y++) {
-                        tileQueue.push(`https://a.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`);
+                        tileQueue.push(`https://a.tile.openstreetmap.org/${z}/${x}/${y}.png`);
                     }
                 }
             }
@@ -268,16 +293,7 @@ window.addEventListener('load', () => {
 
     // If loaded via a shared ?map= URL, the current URL is already shareable
     if (mapId) {
-        const shareBtn = document.getElementById('btn-share');
-        if (shareBtn) {
-            shareBtn.style.display = '';
-            shareBtn.addEventListener('click', () => {
-                navigator.clipboard.writeText(window.location.href).catch(() => { });
-                const old = shareBtn.innerText;
-                shareBtn.innerText = '✅ Copied!';
-                setTimeout(() => shareBtn.innerText = old, 2000);
-            });
-        }
+        setupShareButton();
     }
 
     worker.onmessage = function (e) {
@@ -291,16 +307,7 @@ window.addEventListener('load', () => {
                 
                 window.history.replaceState({}, '', '?map=' + e.data.shareId);
                 navigator.clipboard.writeText(e.data.shortUrl || (window.location.origin + '?map=' + e.data.shareId)).catch(() => { });
-                const shareBtn = document.getElementById('btn-share');
-                if (shareBtn) {
-                    shareBtn.style.display = '';
-                    shareBtn.onclick = () => {
-                        navigator.clipboard.writeText(window.location.href).catch(() => { });
-                        const old = shareBtn.innerText;
-                        shareBtn.innerText = '✅ Copied!';
-                        setTimeout(() => shareBtn.innerText = old, 2000);
-                    };
-                }
+                setupShareButton();
                 const btn = document.getElementById('btn-upload');
                 if (btn && !window.location.search.includes(e.data.shareId)) {
                     btn.innerText = "Link Copied!";
@@ -338,16 +345,7 @@ window.addEventListener('load', () => {
             }, 100);
         } else if (e.data.type === 'SYNC_DONE') {
             window.history.replaceState({}, '', '?map=' + e.data.shareId);
-            const shareBtn = document.getElementById('btn-share');
-            if (shareBtn) {
-                shareBtn.style.display = '';
-                shareBtn.onclick = () => {
-                    navigator.clipboard.writeText(window.location.href).catch(() => { });
-                    const old = shareBtn.innerText;
-                    shareBtn.innerText = '✅ Copied!';
-                    setTimeout(() => shareBtn.innerText = old, 2000);
-                };
-            }
+            setupShareButton();
         } else if (e.data.type === 'NO_CACHE') {
             document.getElementById('loading-spinner-container').style.display = 'none';
             document.getElementById('file-picker-container').style.display = 'flex';
@@ -380,15 +378,7 @@ window.addEventListener('load', () => {
         const file = e.dataTransfer.files[0];
         if (!file) return;
 
-        const mainContent = document.getElementById('main-content');
-        if (mainContent) {
-            mainContent.style.opacity = '0';
-            mainContent.style.pointerEvents = 'none';
-        }
-        document.getElementById('loading-screen').style.display = 'flex';
-        document.getElementById('loading-screen').style.opacity = '1';
-        document.getElementById('file-picker-container').style.display = 'none';
-        document.getElementById('loading-spinner-container').style.display = 'flex';
+        showLoadingScreen();
 
         const token = await getTurnstileToken();
         document.getElementById('loading-text').innerText = "NUCLEAR REACTOR 4 STARTING...";
@@ -428,12 +418,7 @@ function initializeDashboard(graphData) {
             const file = e.target.files[0];
             if (!file) return;
 
-            document.getElementById('main-content').style.opacity = '0';
-            document.getElementById('main-content').style.pointerEvents = 'none';
-            document.getElementById('loading-screen').style.display = 'flex';
-            document.getElementById('loading-screen').style.opacity = '1';
-            document.getElementById('file-picker-container').style.display = 'none';
-            document.getElementById('loading-spinner-container').style.display = 'flex';
+            showLoadingScreen();
 
             const token = await getTurnstileToken();
 
@@ -523,13 +508,13 @@ function initializeDashboard(graphData) {
     if (navToggle) {
         if (hasSeenTour && window.innerWidth <= 768) {
             viewControls.classList.add('collapsed'); // start collapsed on mobile if onboarded
-            navToggle.textContent = '▾'; // pointing down to expand
+            navToggle.textContent = '☰'; // pointing down to expand
         } else {
-            navToggle.textContent = '▴'; // expanded
+            navToggle.textContent = '×'; // expanded
         }
         navToggle.addEventListener('click', () => {
             const isCollapsed = viewControls.classList.toggle('collapsed');
-            navToggle.textContent = isCollapsed ? '▾' : '▴';
+            navToggle.textContent = isCollapsed ? '☰' : '×';
         });
     }
 
@@ -767,12 +752,12 @@ function initializeDashboard(graphData) {
     const topoTiles = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap', maxZoom: 17 });
     const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
     
-    const map = L.map('map', { layers: [darkTiles] }).setView([0, 0], 2);
+    const map = L.map('map', { layers: [osmTiles] }).setView([0, 0], 2);
     window.leafletMap = map;
     
     const baseMaps = {
-        "Carto Dark (Offline Cache)": darkTiles,
-        "OpenStreetMap": osmTiles,
+        "OpenStreetMap (Offline Cache)": osmTiles,
+        "Carto Dark": darkTiles,
         "Open TOPO": topoTiles,
         "ESRI World TOPO": esriTopo,
         "ESRI Satellite": satTiles
@@ -1543,6 +1528,10 @@ function initializeDashboard(graphData) {
         if (window.innerWidth <= 768) {
             steps.push({ element: '#nav-toggle', popover: { title: 'Expand/Collapse', description: 'Use this arrow to toggle the navigation bar and save screen space.', side: "left", align: 'center' } });
             steps.push({ element: '#terminal-toggle', popover: { title: 'Terminal Toggle', description: 'Use this arrow to expand or hide the live packet terminal at the bottom.', side: "left", align: 'center' } });
+            const vc = document.getElementById('view-controls');
+            if (vc) vc.classList.remove('collapsed');
+            const nt = document.getElementById('nav-toggle');
+            if (nt) nt.textContent = '×';
         }
 
         const tour = window.driver.js.driver({
@@ -1555,7 +1544,7 @@ function initializeDashboard(graphData) {
                     const nt = document.getElementById('nav-toggle');
                     if (vc && !vc.classList.contains('collapsed')) {
                         vc.classList.add('collapsed');
-                        if (nt) nt.textContent = '▾';
+                        if (nt) nt.textContent = '☰';
                     }
                     const tc = document.getElementById('terminal-container');
                     const tt = document.getElementById('terminal-toggle');
@@ -1582,86 +1571,51 @@ function initializeDashboard(graphData) {
         tour.drive();
     }
 
-    window.runMapTour = function () {
+    function createTour(storageKey, steps, onEnd) {
         if (!window.driver) return;
         if (window.innerWidth <= 768) {
             const vc = document.getElementById('view-controls');
             if (vc) vc.classList.remove('collapsed');
             const nt = document.getElementById('nav-toggle');
-            if (nt) nt.textContent = '▴';
+            if (nt) nt.textContent = '×';
         }
         const tour = window.driver.js.driver({
-            steps: [
-                { element: '#btn-map', popover: { title: 'Geo Map', description: 'Shows nodes with GPS coordinates. Watch yellow tracer projectiles fly between nodes.', side: "bottom", align: 'start' } },
-                { popover: { title: 'Node Analytics', description: 'Click any blue node on the Map to slide open its Analytics panel for hardware details and telemetry.', side: "center", align: 'start' } },
-                { popover: { title: 'Traceroute Connections', description: 'Click on any of the colored connection lines between nodes to see detailed RF Hop statistics (like Avg SNR).', side: "center", align: 'start' } },
-                { popover: { title: 'Path Discovery', description: 'Click on one node, then click on another node to discover the routing path between them. The path will be highlighted in cyan.', side: "center", align: 'start' } }
-            ],
+            steps: steps,
             onDestroyStarted: () => {
                 tour.destroy();
                 if (window.innerWidth <= 768) {
                     const vc = document.getElementById('view-controls');
                     if (vc) vc.classList.add('collapsed');
                     const nt = document.getElementById('nav-toggle');
-                    if (nt) nt.textContent = '▾';
+                    if (nt) nt.textContent = '☰';
                 }
+                if (onEnd) onEnd();
             }
         });
-        localStorage.setItem('tour_map_seen', 'true');
+        localStorage.setItem(storageKey, 'true');
         tour.drive();
+    }
+
+    window.runMapTour = function () {
+        createTour('tour_map_seen', [
+            { element: '#btn-map', popover: { title: 'Geo Map', description: 'Shows nodes with GPS coordinates. Watch yellow tracer projectiles fly between nodes.', side: "bottom", align: 'start' } },
+            { popover: { title: 'Node Analytics', description: 'Click any blue node on the Map to slide open its Analytics panel for hardware details and telemetry.', side: "center", align: 'start' } },
+            { popover: { title: 'Traceroute Connections', description: 'Click on any of the colored connection lines between nodes to see detailed RF Hop statistics (like Avg SNR).', side: "center", align: 'start' } },
+            { popover: { title: 'Path Discovery', description: 'Click on one node, then click on another node to discover the routing path between them. The path will be highlighted in cyan.', side: "center", align: 'start' } }
+        ]);
     };
 
     window.runNetTour = function () {
-        if (!window.driver) return;
-        if (window.innerWidth <= 768) {
-            const vc = document.getElementById('view-controls');
-            if (vc) vc.classList.remove('collapsed');
-            const nt = document.getElementById('nav-toggle');
-            if (nt) nt.textContent = '▴';
-        }
-        const tour = window.driver.js.driver({
-            steps: [
-                { element: '#btn-net', popover: { title: 'Logical Network', description: 'Physics-based graph where nodes are pulled together by signal strength. Green lines = Excellent SNR, Red = Poor SNR. Node size = Traffic Volume.', side: "bottom", align: 'start' } },
-                { popover: { title: 'Path Discovery', description: 'Click on one node, then click on another node to discover the routing path between them. The path will be highlighted in cyan.', side: "center", align: 'start' } }
-            ],
-            onDestroyStarted: () => {
-                tour.destroy();
-                if (window.innerWidth <= 768) {
-                    const vc = document.getElementById('view-controls');
-                    if (vc) vc.classList.add('collapsed');
-                    const nt = document.getElementById('nav-toggle');
-                    if (nt) nt.textContent = '▾';
-                }
-            }
-        });
-        localStorage.setItem('tour_net_seen', 'true');
-        tour.drive();
+        createTour('tour_net_seen', [
+            { element: '#btn-net', popover: { title: 'Logical Network', description: 'Physics-based graph where nodes are pulled together by signal strength. Green lines = Excellent SNR, Red = Poor SNR. Node size = Traffic Volume.', side: "bottom", align: 'start' } },
+            { popover: { title: 'Path Discovery', description: 'Click on one node, then click on another node to discover the routing path between them. The path will be highlighted in cyan.', side: "center", align: 'start' } }
+        ]);
     };
 
     window.runUnmappedTour = function () {
-        if (!window.driver) return;
-        if (window.innerWidth <= 768) {
-            const vc = document.getElementById('view-controls');
-            if (vc) vc.classList.remove('collapsed');
-            const nt = document.getElementById('nav-toggle');
-            if (nt) nt.textContent = '▴';
-        }
-        const tour = window.driver.js.driver({
-            steps: [
-                { element: '#btn-sidebar', popover: { title: 'Unmapped Nodes', description: 'List of active nodes on the network that haven\'t acquired a GPS fix yet, along with the Network Legend.', side: "bottom", align: 'start' } }
-            ],
-            onDestroyStarted: () => {
-                tour.destroy();
-                if (window.innerWidth <= 768) {
-                    const vc = document.getElementById('view-controls');
-                    if (vc) vc.classList.add('collapsed');
-                    const nt = document.getElementById('nav-toggle');
-                    if (nt) nt.textContent = '▾';
-                }
-            }
-        });
-        localStorage.setItem('tour_unmapped_seen', 'true');
-        tour.drive();
+        createTour('tour_unmapped_seen', [
+            { element: '#btn-sidebar', popover: { title: 'Unmapped Nodes', description: 'List of active nodes on the network that haven\'t acquired a GPS fix yet, along with the Network Legend.', side: "bottom", align: 'start' } }
+        ]);
     };
 
     function initTutorial() {

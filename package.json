@@ -7,7 +7,9 @@
     "wrangler": "^4.105.0"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.2",
     "encom-globe": "^0.5.4",
+    "gif-encoder-2": "^1.0.5",
     "playwright": "^1.61.0",
     "three": "^0.184.0"
   },
