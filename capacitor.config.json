@@ -1,0 +1,5 @@
+{
+  "appId": "org.meshmapper.app",
+  "appName": "MeshLog",
+  "webDir": "dist"
+}

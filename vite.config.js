@@ -122,7 +122,7 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/[a-z]\.basemaps\.cartocdn\.com\/.*/i,
+            urlPattern: /^https:\/\/(?:[a-z]\.basemaps\.cartocdn\.com|server\.arcgisonline\.com|[a-z]\.tile\.openstreetmap\.org|[a-z]\.tile\.opentopomap\.org)\/.*/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'leaflet-tiles-cache',
@@ -131,7 +131,7 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24 * 30
               },
               cacheableResponse: {
-                statuses: [0, 200]
+                statuses: [200]
               }
             }
           }

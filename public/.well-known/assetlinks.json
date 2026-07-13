@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "org.meshmapper.app",
+      "sha256_cert_fingerprints": [
+        "D4:E5:4F:B9:4D:0E:99:BC:18:ED:B7:38:5B:2B:7F:6F:E1:EE:66:D7:F9:05:81:21:38:63:F7:C2:DE:2D:8D:2C"
+      ]
+    }
+  }
+]

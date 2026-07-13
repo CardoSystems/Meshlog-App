@@ -6,7 +6,7 @@ Required Notice: Copyright (c) 2026 CardoSystems
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0d1117">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -186,11 +186,11 @@ Required Notice: Copyright (c) 2026 CardoSystems
                     Demo Dataset</button>
             </div>
             <div style="display: flex; gap: 10px;">
-                <a href="https://meshlog.camal.eu/?map=30aexpfu"
+                <a href="javascript:void(0)" onclick="window.loadMap('30aexpfu')"
                     style="flex: 1; text-align: center; background: rgba(33, 150, 243, 0.1); border: 1px solid rgba(33, 150, 243, 0.5); padding: 10px; border-radius: 8px; color: #2196F3; text-decoration: none; font-weight: bold; transition: all 0.3s;"
                     onmouseover="this.style.background='rgba(33, 150, 243, 0.2)'"
                     onmouseout="this.style.background='rgba(33, 150, 243, 0.1)'">Load DEMO</a>
-                <a href="https://meshlog.camal.eu/?map=s67llxm3"
+                <a href="javascript:void(0)" onclick="window.loadMap('s67llxm3')"
                     style="flex: 1; text-align: center; background: rgba(76, 175, 80, 0.1); border: 1px solid rgba(76, 175, 80, 0.5); padding: 10px; border-radius: 8px; color: #4caf50; text-decoration: none; font-weight: bold; transition: all 0.3s;"
                     onmouseover="this.style.background='rgba(76, 175, 80, 0.2)'"
                     onmouseout="this.style.background='rgba(76, 175, 80, 0.1)'">Load DEMO 2</a>
@@ -447,7 +447,7 @@ Required Notice: Copyright (c) 2026 CardoSystems
         </div>
 
         <div style="text-align: center; margin-bottom: 20px;">
-            <a href="javascript:void(0)" onclick="if(navigator.share) navigator.share({title:'Mesh Log Mapper', url:'https://meshlog.camal.eu'}).catch(()=>{})">
+            <a href="javascript:void(0)" onclick="(navigator.share && !window.Capacitor) ? navigator.share({title:'Mesh Log Mapper', url:'https://meshlog.camal.eu'}).catch(()=>window.open('https://meshlog.camal.eu', '_system')) : window.open('https://meshlog.camal.eu', '_system')">
                 <img id="share-banner" src="./banner_en.gif" style="width: 100%; max-width: 300px; border-radius: 8px; border: 1px solid #444; display: block; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
             </a>
             <div style="font-size: 10px; color: #aaa; margin-top: 5px;">Click banner to share</div>

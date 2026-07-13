@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MeshLog</string>
+    <string name="title_activity_main">MeshLog</string>
+    <string name="package_name">org.meshmapper.app</string>
+    <string name="custom_url_scheme">org.meshmapper.app</string>
+</resources>

@@ -143,6 +143,14 @@ window.addEventListener('load', () => {
     const urlParams = new URLSearchParams(window.location.search);
     let mapId = urlParams.get('map');
 
+    window.loadMap = function(id) {
+        window.history.pushState({}, '', '?map=' + id);
+        document.getElementById('file-picker-container').style.display = 'none';
+        document.getElementById('loading-spinner-container').style.display = 'flex';
+        document.getElementById('loading-text').innerText = "DOWNLOADING SHARED MAP...";
+        worker.postMessage({ cmd: 'start', id: id, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin) });
+    };
+
     // ponytail: memory logic
     let recent = JSON.parse(localStorage.getItem('recentMaps') || '[]');
     if (mapId && !recent.includes(mapId)) {
@@ -153,7 +161,7 @@ window.addEventListener('load', () => {
     if (rmDiv) {
         rmDiv.innerHTML = `<div style="width:100%;text-align:center;color:#888;font-size:12px;">Recent Maps:</div>` + 
             (recent.length > 0 
-                ? recent.map(id => `<a href="?map=${id}" style="color:#4caf50;text-decoration:none;border:1px solid #4caf50;padding:4px 8px;border-radius:4px;font-size:12px;">${id}</a>`).join('')
+                ? recent.map(id => `<a href="javascript:void(0)" onclick="window.loadMap('${id}')" style="color:#4caf50;text-decoration:none;border:1px solid #4caf50;padding:4px 8px;border-radius:4px;font-size:12px;">${id}</a>`).join('')
                 : `<span style="color:#555;font-size:12px;">None yet. Open a map to save it here.</span>`);
     }
 
@@ -167,7 +175,7 @@ window.addEventListener('load', () => {
                 document.getElementById('loading-text').innerText = "RESTORING LOCAL HISTORY...";
                 setTimeout(() => initializeDashboard(localGraph), 100);
             } else {
-                worker.postMessage({ cmd: 'start', id: mapId, origin: window.location.origin });
+                worker.postMessage({ cmd: 'start', id: mapId, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin) });
             }
         });
     } else {
@@ -184,7 +192,7 @@ window.addEventListener('load', () => {
                     document.getElementById('loading-spinner-container').style.display = 'none';
                     document.getElementById('file-picker-container').style.display = 'flex';
                 } else {
-                    worker.postMessage({ cmd: 'start', id: null, origin: window.location.origin });
+                    worker.postMessage({ cmd: 'start', id: null, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin) });
                 }
             }
         });
@@ -220,7 +228,7 @@ window.addEventListener('load', () => {
             if (pending) {
                 const token = await getTurnstileToken();
                 if (token && token !== 'offline-bypass') {
-                    worker.postMessage({ cmd: 'sync', graph: pending, turnstileToken: token, origin: window.location.origin });
+                    worker.postMessage({ cmd: 'sync', graph: pending, turnstileToken: token, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin) });
                     await idb.set('syncQueue', null);
                 }
             }
@@ -307,7 +315,9 @@ window.addEventListener('load', () => {
                 idb.set(`history_${e.data.shareId}`, e.data.graphData);
                 
                 window.history.replaceState({}, '', '?map=' + e.data.shareId);
-                navigator.clipboard.writeText(e.data.shortUrl || (window.location.origin + '?map=' + e.data.shareId)).catch(() => { });
+                // ponytail: always use app link instead of localhost
+                const appUrl = (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('capacitor')) ? 'https://meshlog.camal.eu' : window.location.origin;
+                navigator.clipboard.writeText(e.data.shortUrl || (appUrl + '?map=' + e.data.shareId)).catch(() => { });
                 setupShareButton();
                 const btn = document.getElementById('btn-upload');
                 if (btn && !window.location.search.includes(e.data.shareId)) {
@@ -318,6 +328,12 @@ window.addEventListener('load', () => {
 
             // Inject shareId so autoSave remembers the URL
             if (e.data.shareId) e.data.graphData.shareId = e.data.shareId;
+
+            // ponytail: uncollapse UI on new log upload
+            const vc = document.getElementById('view-controls');
+            const tc = document.getElementById('terminal-container');
+            if (vc) vc.classList.remove('collapsed');
+            if (tc) tc.classList.remove('collapsed');
 
             // If offline local upload inside existing dashboard, tear down old map
             const mapEl = document.getElementById('map');
@@ -371,7 +387,7 @@ window.addEventListener('load', () => {
         document.getElementById('loading-spinner-container').style.display = 'flex';
         const token = await getTurnstileToken();
         document.getElementById('loading-text').innerText = "NUCLEAR REACTOR 4 STARTING...";
-        worker.postMessage({ cmd: 'parse_file', file: file, origin: window.location.origin, turnstileToken: token });
+        worker.postMessage({ cmd: 'parse_file', file: file, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
     });
 
     // Global drag and drop support
@@ -391,7 +407,7 @@ window.addEventListener('load', () => {
 
         const token = await getTurnstileToken();
         document.getElementById('loading-text').innerText = "NUCLEAR REACTOR 4 STARTING...";
-        worker.postMessage({ cmd: 'parse_file', file: file, origin: window.location.origin, turnstileToken: token });
+        worker.postMessage({ cmd: 'parse_file', file: file, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
     });
 
     // Test environment mock trigger
@@ -405,13 +421,21 @@ window.addEventListener('load', () => {
                 const token = await getTurnstileToken();
                 document.getElementById('loading-text').innerText = "DOWNLOADING DEMO LOG...";
                 const blob = new Blob([window.__MOCK_DEMO_DATA__], { type: 'text/plain' });
-                worker.postMessage({ cmd: 'parse_file', file: blob, origin: window.location.origin, turnstileToken: token });
+                worker.postMessage({ cmd: 'parse_file', file: blob, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
             });
         }
     }, 500);
 
 
 });
+
+// ponytail: request persistent storage so the OS never deletes our cached map tiles when low on space. 
+// Android (Capacitor) grants this automatically since it's a native app. PWAs often get denied.
+if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().then(granted => {
+        if (granted) console.log("Storage will not be cleared except by explicit user action");
+    });
+}
 
 function initializeDashboard(graphData) {
     idb.set('autoSave', graphData); // ponytail: auto-save locally to survive refresh
@@ -433,7 +457,7 @@ function initializeDashboard(graphData) {
 
             document.getElementById('loading-text').innerText = "NUCLEAR REACTOR 4 STARTING...";
 
-            worker.postMessage({ cmd: 'parse_file', file: file, origin: window.location.origin, turnstileToken: token });
+            worker.postMessage({ cmd: 'parse_file', file: file, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
         };
     }
 
@@ -718,11 +742,18 @@ function initializeDashboard(graphData) {
     }
 
     if (btnSettings && settingsModal) {
-        btnSettings.addEventListener('click', () => {
+        btnSettings.addEventListener('click', async () => {
             settingZoom.value = localStorage.getItem('offline_zoom_level') || '10';
             settingDisableTours.checked = localStorage.getItem('disable_tours') === 'true';
             if (settingD3Spread) settingD3Spread.value = localStorage.getItem('d3_spread') || '-300';
             settingsModal.showModal();
+            // ponytail: true cache size
+            try {
+                const cache = await caches.open('leaflet-tiles-cache');
+                const keys = await cache.keys();
+                const pStats = document.getElementById('cache-stats');
+                if (pStats) pStats.innerText = `${keys.length} tiles in cache`;
+            } catch(e) {}
         });
 
         btnResetTours.addEventListener('click', () => {
@@ -737,12 +768,61 @@ function initializeDashboard(graphData) {
             const oldZ = localStorage.getItem('offline_zoom_level') || '10';
             localStorage.setItem('offline_zoom_level', settingZoom.value);
             localStorage.setItem('disable_tours', settingDisableTours.checked ? 'true' : 'false');
+            if (settingD3Spread) localStorage.setItem('d3_spread', settingD3Spread.value);
             settingsModal.close();
             
-            if (oldZ !== settingZoom.value && confirm("Zoom setting saved. Reload app to start caching new zoom levels?")) {
-                window.location.reload();
+            // ponytail: if zoom level changed, trigger background fetch of the current viewport
+            if (settingZoom.value !== oldZ) {
+                downloadTiles(parseInt(settingZoom.value));
             }
         });
+
+        async function downloadTiles(maxZoom) {
+            if (!window.leafletMap) return;
+            const bounds = window.leafletMap.getBounds();
+            let activeUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+            window.leafletMap.eachLayer(l => { if(l._url) activeUrl = l._url; });
+            
+            let urls = [];
+            for (let z = 1; z <= maxZoom; z++) {
+                const nw = window.leafletMap.project(bounds.getNorthWest(), z);
+                const se = window.leafletMap.project(bounds.getSouthEast(), z);
+                const minX = Math.floor(nw.x / 256), maxX = Math.floor(se.x / 256);
+                const minY = Math.floor(nw.y / 256), maxY = Math.floor(se.y / 256);
+                for (let x = minX; x <= maxX; x++) {
+                    for (let y = minY; y <= maxY; y++) {
+                        let u = activeUrl.replace('{z}', z).replace('{x}', x).replace('{y}', y).replace('{s}', 'a').replace('{r}', '');
+                        urls.push(u);
+                        if (urls.length > 56000) break;
+                    }
+                    if (urls.length > 56000) break;
+                }
+            }
+            
+            const pBar = document.getElementById('cache-progress');
+            const pEta = document.getElementById('cache-eta');
+            const pStats = document.getElementById('cache-stats');
+            if(pBar) { pBar.max = urls.length; pBar.value = 0; }
+            if(pEta) pEta.innerText = "Downloading...";
+            if(pStats) pStats.innerText = `0 / ${urls.length} tiles`;
+            
+            let done = 0;
+            // Fetch in batches of 10 to utilize SW caching without freezing UI
+            for (let i = 0; i < urls.length; i += 10) {
+                const batch = urls.slice(i, i + 10);
+                await Promise.allSettled(batch.map(u => fetch(u, { mode: 'cors' })));
+                done += batch.length;
+                if(pBar) pBar.value = done;
+                if(pStats) pStats.innerText = `${done} / ${urls.length} tiles`;
+            }
+            if(pEta) pEta.innerText = "Completed";
+            
+            try {
+                const cache = await caches.open('leaflet-tiles-cache');
+                const keys = await cache.keys();
+                if (pStats) pStats.innerText = `${keys.length} tiles in cache`;
+            } catch(e) {}
+        }
     }
 
 
@@ -755,11 +835,11 @@ function initializeDashboard(graphData) {
         shadowUrl: '/images/marker-shadow.png'
     });
 
-    const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', maxZoom: 19 });
-    const satTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
-    const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 });
-    const topoTiles = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap', maxZoom: 17 });
-    const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
+    const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', maxZoom: 19, crossOrigin: true });
+    const satTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19, crossOrigin: true });
+    const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19, crossOrigin: true });
+    const topoTiles = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap', maxZoom: 17, crossOrigin: true });
+    const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19, crossOrigin: true });
     
     const map = L.map('map', { layers: [osmTiles] }).setView([0, 0], 2);
     window.leafletMap = map;
@@ -961,7 +1041,7 @@ function initializeDashboard(graphData) {
             if (!searchStr && typeof graphData !== 'undefined' && graphData && graphData.shareId) {
                 searchStr = '?map=' + graphData.shareId;
             }
-            const link = window.location.origin + window.location.pathname + searchStr + '#node=' + nodeId;
+            const link = (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin) + window.location.pathname + searchStr + '#node=' + nodeId;
             navigator.clipboard.writeText(link).then(() => {
                 const toast = document.createElement('div');
                 toast.innerText = 'Copied to clipboard!';
