@@ -26,13 +26,9 @@ export default {
         const token = payload.token;
         if (!token) return new Response("Missing Turnstile token", { status: 403, headers: { "Access-Control-Allow-Origin": "*" } });
         
-        // Local dev/Playwright bypass
-        if (token === 'test-bypass-token' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')) {
-            console.log("Bypassing Turnstile for local Playwright test");
-        } else {
-            if (!env.TURNSTILE_SECRET_KEY) {
-                return new Response("Server configuration error", { status: 500, headers: { "Access-Control-Allow-Origin": "*" } });
-            }
+        if (!env.TURNSTILE_SECRET_KEY) {
+            return new Response("Server configuration error", { status: 500, headers: { "Access-Control-Allow-Origin": "*" } });
+        }
         
         let formData = new FormData();
         formData.append("secret", env.TURNSTILE_SECRET_KEY);
@@ -47,7 +43,6 @@ export default {
         const outcome = await siteverifyResult.json();
         if (!outcome.success) {
             return new Response("Forbidden: Turnstile verification failed", { status: 403, headers: { "Access-Control-Allow-Origin": "*" } });
-        }
         }
         
         // --- SIZE LIMIT CHECK (Max 25 MiB for KV) ---

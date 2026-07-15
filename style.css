@@ -78,7 +78,7 @@ body { margin: 0; padding: 0; background-color: #111; color: #fff; font-family: 
             #term-header-controls { gap: 4px !important; }
             #speed-label { display: none !important; }
             #clear-term-btn { order: 4 !important; margin-left: 0 !important; padding: 4px 6px !important; }
-            #node-filter { width: 55px !important; padding: 4px 6px !important; }
+            #node-filter { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: calc(100% - 120px) !important; padding: 4px 6px !important; margin: 0 !important; }
             #pause-sim-btn { padding: 4px 6px !important; }
             /* Row 1: title + toggle, always visible */
             #terminal-header-row1 { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; width: 100%; box-sizing: border-box; min-height: 44px; }
@@ -86,7 +86,7 @@ body { margin: 0; padding: 0; background-color: #111; color: #fff; font-family: 
             #signature-block span:nth-child(1) { order: 2; margin-top: 2px; }
             #build-timestamp { order: 1; font-size: 10px !important; }
             #terminal-toggle-mobile { order: 3; margin-top: 2px; }
-            #terminal-title { font-size: 11px; }
+            #terminal-title { display: none !important; }
             #terminal-toggle-desktop { display: none !important; }
             #terminal-toggle-mobile { display: block !important; }
             #live-feed-text { display: none !important; }

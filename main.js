@@ -62,10 +62,6 @@ function showLoadingScreen() {
 }
 function getTurnstileToken() {
     return new Promise((resolve) => {
-        if (!navigator.onLine) return resolve('offline-bypass'); // ponytail: skip turnstile if offline
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            return resolve('test-bypass-token');
-        }
         if (!window.turnstile) return resolve(null);
         document.getElementById('loading-text').innerText = "VERIFYING SECURITY...";
         try {
