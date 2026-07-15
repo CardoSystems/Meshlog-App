@@ -55,8 +55,12 @@ export default {
             await kv.put("parsed_graph", graphStr);
             return new Response(JSON.stringify({ id: "demo" }), { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
         } else {
-            const id = Math.random().toString(36).substring(2, 10);
-            await kv.put(`map_${id}`, graphStr);
+            const id = payload.fileHash || Math.random().toString(36).substring(2, 10);
+            
+            // ponytail: skip KV write if duplicate
+            if (!(await kv.get(`map_${id}`))) {
+                await kv.put(`map_${id}`, graphStr);
+            }
             
             const shortUrl = `https://meshlog.camal.eu/?map=${id}`;
             

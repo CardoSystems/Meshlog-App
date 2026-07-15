@@ -30,9 +30,41 @@ let worker;
 // ponytail: lazy raw IDB wrapper, skip idb-keyval dep
 
 const idb = {
-    open: () => new Promise(r => { let q = indexedDB.open('m_db',1); q.onupgradeneeded = () => q.result.createObjectStore('kv'); q.onsuccess = () => r(q.result); }),
-    get: async k => new Promise(async r => { (await idb.open()).transaction('kv').objectStore('kv').get(k).onsuccess = e => r(e.target.result); }),
-    set: async (k,v) => new Promise(async r => { (await idb.open()).transaction('kv','readwrite').objectStore('kv').put(v,k).onsuccess = r; })
+    open: () => new Promise(r => { 
+        try {
+            let q = indexedDB.open('m_db',1); 
+            q.onupgradeneeded = () => { try{q.result.createObjectStore('kv')}catch(e){} }; 
+            q.onsuccess = () => r(q.result); 
+            q.onerror = q.onblocked = () => r(null);
+        } catch(e) { r(null); }
+    }),
+    get: k => Promise.race([
+        new Promise(r => setTimeout(() => r(null), 1000)),
+        (async () => {
+            try {
+                const db = await idb.open();
+                if (!db) return null;
+                return await new Promise(r => {
+                    let req = db.transaction('kv').objectStore('kv').get(k);
+                    req.onsuccess = e => r(e.target.result);
+                    req.onerror = () => r(null);
+                });
+            } catch (e) { return null; }
+        })()
+    ]),
+    set: (k,v) => Promise.race([
+        new Promise(r => setTimeout(() => r(null), 1500)),
+        (async () => {
+            try {
+                const db = await idb.open();
+                if (!db) return null;
+                return await new Promise(r => {
+                    let req = db.transaction('kv','readwrite').objectStore('kv').put(v,k);
+                    req.onsuccess = req.onerror = () => r(true);
+                });
+            } catch (e) { return null; }
+        })()
+    ])
 };
 const escapeHTML = str => String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
 
@@ -64,20 +96,29 @@ function getTurnstileToken() {
     return new Promise((resolve) => {
         if (!window.turnstile) return resolve(null);
         document.getElementById('loading-text').innerText = "VERIFYING SECURITY...";
+        
+        // ponytail: stop hanging forever on locked Android WebViews
+        let done = false;
+        const to = setTimeout(() => {
+            if(!done) { done = true; try { window.turnstile.remove('#cf-turnstile-widget'); } catch(e){} resolve(null); }
+        }, 6000);
+        
         try {
             window.turnstile.render('#cf-turnstile-widget', {
                 sitekey: '0x4AAAAAADoa_6pJqFVy3kJU',
                 action: 'turnstile-spin-v1',
                 callback: function (token) {
-                    window.turnstile.remove('#cf-turnstile-widget');
-                    resolve(token);
+                    if(!done) { done = true; clearTimeout(to); try{window.turnstile.remove('#cf-turnstile-widget');}catch(e){} resolve(token); }
                 },
                 'error-callback': function () {
-                    resolve(null);
+                    if(!done) { done = true; clearTimeout(to); resolve(null); }
+                },
+                'timeout-callback': function () {
+                    if(!done) { done = true; clearTimeout(to); resolve(null); }
                 }
             });
         } catch (e) {
-            resolve(null);
+            if(!done) { done = true; clearTimeout(to); resolve(null); }
         }
     });
 }
@@ -183,13 +224,9 @@ window.addEventListener('load', () => {
                 document.getElementById('loading-text').innerText = "RESTORING LOCAL SESSION...";
                 setTimeout(() => initializeDashboard(data), 100);
             } else {
-                if (!navigator.onLine) {
-                    // ponytail: immediately show uploader if offline and no cache
-                    document.getElementById('loading-spinner-container').style.display = 'none';
-                    document.getElementById('file-picker-container').style.display = 'flex';
-                } else {
-                    worker.postMessage({ cmd: 'start', id: null, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin) });
-                }
+                // ponytail: skip the 3-second dead fetch for legacy global cache. Show UI instantly.
+                document.getElementById('loading-spinner-container').style.display = 'none';
+                document.getElementById('file-picker-container').style.display = 'flex';
             }
         });
     }
@@ -321,6 +358,16 @@ window.addEventListener('load', () => {
                 if (btn && !window.location.search.includes(e.data.shareId)) {
                     btn.innerText = "Link Copied!";
                     setTimeout(() => btn.innerText = "Upload Log", 2000);
+                }
+            }
+            
+            // ponytail: show duplicate warning toast
+            if (e.data.isDuplicate) {
+                const toast = document.getElementById('centered-toast');
+                if (toast) {
+                    toast.innerText = "⚠️ Duplicate log detected. Redirected to original.";
+                    toast.style.display = 'block';
+                    setTimeout(() => toast.style.display = 'none', 5000);
                 }
             }
 
@@ -527,10 +574,10 @@ function initializeDashboard(graphData) {
         } else {
             navToggle.textContent = '×'; // expanded
         }
-        navToggle.addEventListener('click', () => {
+        navToggle.onclick = () => {
             const isCollapsed = viewControls.classList.toggle('collapsed');
             navToggle.textContent = isCollapsed ? '☰' : '×';
-        });
+        };
     }
 
     let meshDevice = null;
@@ -601,14 +648,14 @@ function initializeDashboard(graphData) {
     }
     
     terminalToggles.forEach(toggle => {
-        toggle.addEventListener('click', () => {
+        toggle.onclick = () => {
             const isCollapsed = terminalContainer.classList.toggle('collapsed');
             terminalToggles.forEach(t => t.textContent = isCollapsed ? '▴' : '▾');
             setTimeout(() => { 
                 if (window.leafletMap) window.leafletMap.invalidateSize(); 
                 window.dispatchEvent(new Event('resize'));
             }, 350);
-        });
+        };
     });
 
     if (!window._resizeAttached) {
@@ -621,16 +668,16 @@ function initializeDashboard(graphData) {
         });
     }
 
-    btnSidebar.addEventListener('click', () => {
+    btnSidebar.onclick = () => {
         btnSidebar.classList.add('active'); btnMap.classList.remove('active'); btnNet.classList.remove('active');
         mapDiv.style.display = 'none'; d3Div.style.display = 'none';
         sidebarDiv.style.display = 'flex';
         if (window.runUnmappedTour && !localStorage.getItem('tour_unmapped_seen') && localStorage.getItem('disable_tours') !== 'true') {
             setTimeout(() => window.runUnmappedTour(), 200);
         }
-    });
+    };
 
-    btnMap.addEventListener('click', () => {
+    btnMap.onclick = () => {
         btnMap.classList.add('active'); btnNet.classList.remove('active'); btnSidebar.classList.remove('active');
         mapDiv.style.display = 'block'; d3Div.style.display = 'none';
         sidebarDiv.style.display = 'none';
@@ -638,9 +685,9 @@ function initializeDashboard(graphData) {
         if (window.runMapTour && !localStorage.getItem('tour_map_seen') && localStorage.getItem('tour_global_seen') && localStorage.getItem('disable_tours') !== 'true') {
             setTimeout(() => window.runMapTour(), 200);
         }
-    });
+    };
 
-    btnNet.addEventListener('click', () => {
+    btnNet.onclick = () => {
         btnNet.classList.add('active'); btnMap.classList.remove('active'); btnSidebar.classList.remove('active');
         mapDiv.style.display = 'none'; d3Div.style.display = 'block';
         sidebarDiv.style.display = 'none';
@@ -648,7 +695,7 @@ function initializeDashboard(graphData) {
             setTimeout(() => window.runNetTour(), 200);
         }
         if (!window.d3Initialized) initD3Graph();
-    });
+    };
 
     // ponytail: settings modal logic
     const btnSettings = document.getElementById('btn-settings');
@@ -947,13 +994,25 @@ function initializeDashboard(graphData) {
         }
 
         // ponytail: route from last clicked node
-        if (window.lastClickedNodeId && window.lastClickedNodeId !== nodeId) {
-            highlightPath(window.lastClickedNodeId, nodeId);
+        if (window.lastClickedNodeId === nodeId) {
+            window.lastClickedNodeId = null;
+            highlightPath(null, null);
+        } else {
+            if (window.lastClickedNodeId) {
+                highlightPath(window.lastClickedNodeId, nodeId);
+            }
+            window.lastClickedNodeId = nodeId;
         }
-        window.lastClickedNodeId = nodeId;
     }
 
     function highlightPath(src, dst) {
+        if (!src || !dst) {
+            if (window.leafletRouteGroup) { window.leafletMap.removeLayer(window.leafletRouteGroup); window.leafletRouteGroup = null; }
+            if (window.highlightD3Route) window.highlightD3Route(null);
+            Object.keys(markers).forEach(id => markers[id].setOpacity(1));
+            if (window.leafletRouteLines) window.leafletRouteLines.forEach(line => line.setStyle({ opacity: 0.8 }));
+            return;
+        }
         const adj = {};
         graphData.edges.forEach(e => {
             const s = e.source.id || e.source; const t = e.target.id || e.target;
@@ -1010,14 +1069,14 @@ function initializeDashboard(graphData) {
         }
     }
 
-    document.getElementById('close-panel').addEventListener('click', () => {
+    document.getElementById('close-panel').onclick = () => {
         document.getElementById('node-analytics-panel').classList.remove('open');
         document.body.classList.remove('panel-open');
         if (window.location.hash.startsWith('#node=')) {
             window.history.replaceState(null, '', window.location.pathname + window.location.search);
         }
         setTimeout(() => { if (map) map.invalidateSize(); }, 300);
-    });
+    };
 
     graphData.nodes.forEach(node => {
         if (node.lat !== undefined && node.lon !== undefined) {
@@ -1592,31 +1651,31 @@ function initializeDashboard(graphData) {
     }
 
     const nf = document.getElementById('node-filter');
-    if (nf) nf.addEventListener('input', applyTerminalFilters);
+    if (nf) nf.oninput = applyTerminalFilters;
     const pf = document.getElementById('port-filter');
-    if (pf) pf.addEventListener('change', applyTerminalFilters);
+    if (pf) pf.onchange = applyTerminalFilters;
 
-    document.getElementById('close-modal').addEventListener('click', () => {
+    document.getElementById('close-modal').onclick = () => {
         document.getElementById('dpi-modal').style.display = 'none';
-    });
+    };
 
     // ponytail: one-click copy for json payloads
-    document.getElementById('copy-dpi-btn').addEventListener('click', async (e) => {
+    document.getElementById('copy-dpi-btn').onclick = async (e) => {
         const payload = document.getElementById('dpi-payload').innerText;
         await navigator.clipboard.writeText(payload);
         const btn = e.target;
         btn.innerText = 'Copied!';
         setTimeout(() => btn.innerText = 'Copy', 2000);
-    });
+    };
 
     // ponytail: one-click clear terminal
-    document.getElementById('clear-term-btn').addEventListener('click', () => {
+    document.getElementById('clear-term-btn').onclick = () => {
         document.getElementById('terminal-output').innerHTML = '';
-    });
+    };
 
     // ponytail: pause simulation
     window.isSimulationPaused = false;
-    document.getElementById('pause-sim-btn').addEventListener('click', (e) => {
+    document.getElementById('pause-sim-btn').onclick = (e) => {
         window.isSimulationPaused = !window.isSimulationPaused;
         const btn = e.target;
         if (window.isSimulationPaused) {
@@ -1628,7 +1687,7 @@ function initializeDashboard(graphData) {
             btn.style.background = '#333';
             btn.style.borderColor = '#555';
         }
-    });
+    };
 
     // ponytail: global escape key to close all modals and panels
     document.addEventListener('keydown', (e) => {
@@ -1791,13 +1850,13 @@ function initializeDashboard(graphData) {
     };
 
     function initTutorial() {
-        document.getElementById('btn-tutorial').addEventListener('click', () => {
+        document.getElementById('btn-tutorial').onclick = () => {
             localStorage.removeItem('tour_global_seen');
             localStorage.removeItem('tour_map_seen');
             localStorage.removeItem('tour_net_seen');
             localStorage.removeItem('tour_unmapped_seen');
             runGlobalTour();
-        });
+        };
 
         if (!localStorage.getItem('tour_global_seen')) {
             setTimeout(() => runGlobalTour(), 500);

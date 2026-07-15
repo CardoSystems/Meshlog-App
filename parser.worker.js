@@ -11,7 +11,11 @@ self.onmessage = async function(e) {
             if (e.data.cmd === 'start') {
                 try {
                     const dataUrl = e.data.id ? `/api/data?id=${e.data.id}` : `/api/data`;
-                    const dataRes = await fetch(origin + dataUrl);
+                    // ponytail: fast timeout so offline/flaky Android doesn't hang on 'CHECKING CACHE...'
+                    const controller = new AbortController();
+                    const timer = setTimeout(() => controller.abort(), e.data.id ? 15000 : 3000);
+                    const dataRes = await fetch(origin + dataUrl, { signal: controller.signal });
+                    clearTimeout(timer);
                     if (dataRes.ok) {
                         const graph = await dataRes.json();
                         self.postMessage({ type: 'DONE', graphData: graph, shareId: e.data.id });
@@ -44,6 +48,20 @@ self.onmessage = async function(e) {
             if (e.data.cmd === 'parse_file') {
                 try {
                     let text = await e.data.file.text();
+                    
+                    // ponytail: native hash for deduplication
+                    const hashBuffer = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(text));
+                    const fileHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 8);
+
+                    // ponytail: check server first to avoid parsing/uploading dupes
+                    try {
+                        const existRes = await fetch(`${origin}/api/data?id=${fileHash}`);
+                        if (existRes.ok) {
+                            const existingGraph = await existRes.json();
+                            self.postMessage({ type: 'DONE', graphData: existingGraph, shareId: fileHash, isDuplicate: true, shortUrl: `https://meshlog.camal.eu/?map=${fileHash}` });
+                            return;
+                        }
+                    } catch (e) { /* ignore offline/network errors and proceed to parse */ }
                 
                 const nodes = new Map(); // id (hex) -> nodeData
       const unmappedNodes = new Set();
@@ -343,7 +361,7 @@ self.onmessage = async function(e) {
                     const cacheRes = await fetch(origin + '/api/cache', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ isDemo: e.data.cmd === 'start_demo', graph: graph, token: e.data.turnstileToken })
+                        body: JSON.stringify({ isDemo: e.data.cmd === 'start_demo', graph: graph, token: e.data.turnstileToken, fileHash: fileHash })
                     });
                     if (cacheRes.ok) {
                         const cacheData = await cacheRes.json();
