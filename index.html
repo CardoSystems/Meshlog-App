@@ -263,8 +263,6 @@ Required Notice: Copyright (c) 2026 CardoSystems
 
     <div id="main-content">
         <div id="view-controls">
-            <input type="text" id="node-search" list="node-datalist" placeholder="🔍 Search Nodes..."
-                style="background: #333; color: #fff; border: 1px solid #555; padding: 6px 10px; border-radius: 5px; outline: none;">
             <datalist id="node-datalist"></datalist>
             <button id="btn-map" class="active">Geo Map</button>
             <button id="btn-net">Logical Network</button>
@@ -316,11 +314,11 @@ Required Notice: Copyright (c) 2026 CardoSystems
                 <div id="terminal-header-row1">
                     <span id="terminal-title" style="z-index: 1;">>_ Packet Inspector</span>
                 </div>
-                <div id="terminal-header-row2" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                    <input type="text" id="node-filter" placeholder="Search Node ID..."
-                        style="background: #333; color: #fff; border: 1px solid #555; padding: 4px 8px; border-radius: 4px; font-size: 12px; width: 120px; outline: none;">
+                <div id="term-header-controls" style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                    <input type="search" id="node-filter" list="node-datalist" placeholder="Search Node ID..."
+                        style="background: #333; color: #fff; border: 1px solid #555; padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; order: 1;">
                     <select id="port-filter"
-                        style="background: #333; color: #fff; border: 1px solid #555; padding: 4px 6px; border-radius: 4px; font-size: 12px; cursor: pointer; outline: none;">
+                        style="background: #333; color: #fff; border: 1px solid #555; padding: 4px 6px; border-radius: 4px; font-size: 12px; cursor: pointer; outline: none; order: 2;">
                         <option value="">All Ports</option>
                         <option value="POSITION_APP">Position</option>
                         <option value="TELEMETRY_APP">Telemetry</option>
@@ -331,29 +329,32 @@ Required Notice: Copyright (c) 2026 CardoSystems
                         <option value="WAYPOINT_APP">Waypoint</option>
                         <option value="MAP_REPORT_APP">Map Report</option>
                     </select>
-                    <div style="display:flex; align-items:center; gap:5px;">
-                        <label style="font-size: 12px; color: #888; white-space: nowrap;">Speed:</label>
-                        <select id="speed-control"
-                            style="background: #333; color: #fff; border: 1px solid #555; padding: 4px 6px; border-radius: 4px; font-size: 12px; cursor: pointer;">
-                            <option value="0.25">0.25x</option>
-                            <option value="0.5">0.5x</option>
-                            <option value="0.75">0.75x</option>
-                            <option value="1" selected>1.0x</option>
-                            <option value="2">2.0x</option>
-                            <option value="5">5.0x</option>
-                            <option value="10">10.0x</option>
-                        </select>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:5px; white-space:nowrap;">
-                        <span id="live-feed-text" style="font-size: 12px; color: #888;">Live Feed</span>
-                        <button id="terminal-toggle-desktop" class="term-toggle" title="Toggle terminal"
-                            style="background:#333; border:1px solid #555; color:#fff; font-size:16px; cursor:pointer; padding:2px 10px; border-radius:4px; line-height:1; transition:0.2s;">▾</button>
-                    </div>
+                    
+                    <button id="pause-sim-btn" style="background:#333; color:#fff; border:1px solid #555; font-size:12px; cursor:pointer; padding:4px 10px; border-radius:4px; line-height:1; transition:0.2s; order: 3;">Pause</button>
+                    <label id="speed-label" style="font-size: 12px; color: #888; white-space: nowrap; order: 4;">Speed:</label>
+                    <select id="speed-control"
+                        style="background: #333; color: #fff; border: 1px solid #555; padding: 4px 6px; border-radius: 4px; font-size: 12px; cursor: pointer; order: 5;">
+                        <option value="0.25">0.25x</option>
+                        <option value="0.5">0.5x</option>
+                        <option value="0.75">0.75x</option>
+                        <option value="1" selected>1.0x</option>
+                        <option value="2">2.0x</option>
+                        <option value="5">5.0x</option>
+                        <option value="10">10.0x</option>
+                    </select>
+                    
+                    <span id="live-feed-text" style="font-size: 12px; color: #888; order: 6; margin-left: auto;">Live Feed</span>
+                    <button id="clear-term-btn" title="Clear terminal" style="background:#333; border:1px solid #555; color:#fff; font-size:12px; cursor:pointer; padding:4px 8px; border-radius:4px; line-height:1; transition:0.2s; order: 7;">Clear</button>
+                    <button id="terminal-toggle-desktop" class="term-toggle" title="Toggle terminal"
+                            style="background:#333; border:1px solid #555; color:#fff; font-size:16px; cursor:pointer; padding:2px 10px; border-radius:4px; line-height:1; transition:0.2s; order: 8;">▾</button>
                 </div>
             </div>
             <div id="terminal-output"></div>
         </div>
     </div>
+
+    <!-- Centered Toast -->
+    <div id="centered-toast" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); color: #fff; padding: 15px 25px; border-radius: 8px; z-index: 1000000; font-size: 16px; font-weight: bold; border: 1px solid #ff5252; box-shadow: 0 4px 15px rgba(0,0,0,0.5); pointer-events: none; white-space: nowrap;"></div>
 
     <script type="module" src="./main.js"></script>
 
@@ -362,7 +363,10 @@ Required Notice: Copyright (c) 2026 CardoSystems
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Deep Packet Inspection</h3>
-                <button id="close-modal">&times;</button>
+                <div style="display:flex; gap:10px;">
+                    <button id="copy-dpi-btn" style="background:#4caf50; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer;">Copy</button>
+                    <button id="close-modal">&times;</button>
+                </div>
             </div>
             <div class="modal-body">
                 <pre><code id="dpi-payload"></code></pre>
@@ -426,7 +430,12 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <input type="range" id="setting-d3-spread" min="-1000" max="-50" value="-300" style="width: 100%; accent-color: #00bcd4;">
         </div>
 
-        <div style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
+            <label style="font-size: 12px; color: #aaa;">Color Packets by Type (Port)</label>
+            <input type="checkbox" id="setting-color-by-type" style="transform: scale(1.2); cursor: pointer;">
+        </div>
+
+        <div style="margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
             <label style="font-size: 12px; color: #aaa;">Disable Auto-Tours</label>
             <input type="checkbox" id="setting-disable-tours" style="transform: scale(1.2); cursor: pointer;">
         </div>

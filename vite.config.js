@@ -10,6 +10,15 @@ export default defineConfig({
     'process.env': {},
     'process.env.NODE_ENV': '"production"'
   },
+  build: {
+    target: 'esnext',
+    sourcemap: false,
+    cssCodeSplit: true,
+    minify: 'esbuild'
+  },
+  esbuild: {
+    pure: ['console.log', 'console.info', 'console.debug']
+  },
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',

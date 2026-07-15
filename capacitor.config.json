@@ -1,5 +1,9 @@
 {
   "appId": "org.meshmapper.app",
   "appName": "MeshLog",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "url": "https://mesh-log-mapper.xperia.workers.dev",
+    "cleartext": true
+  }
 }

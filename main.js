@@ -250,6 +250,8 @@ window.addEventListener('load', () => {
             
             // ponytail: hyper-focus cache on Portugal bounding box up to zoom 12 (~3500 tiles) progressively
             const maxZ = parseInt(localStorage.getItem('offline_zoom_level') || '10', 10);
+            const activeUrl = Object.values(window.leafletMap?._layers || {}).find(l => l._url)?._url || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
             for(let z=0; z<=maxZ; z++) {
                 const xMin = lon2tile(wLon, z);
                 const xMax = lon2tile(eLon, z);
@@ -258,7 +260,7 @@ window.addEventListener('load', () => {
 
                 for(let x=xMin; x<=xMax; x++) {
                     for(let y=yMin; y<=yMax; y++) {
-                        tileQueue.push(`https://a.tile.openstreetmap.org/${z}/${x}/${y}.png`);
+                        tileQueue.push(activeUrl.replace('{s}', 'a').replace('{z}', z).replace('{x}', x).replace('{y}', y).replace('{r}', ''));
                     }
                 }
             }
@@ -270,7 +272,7 @@ window.addEventListener('load', () => {
             const processQueue = async () => {
                 while(tileQueue.length > 0) {
                     if (!navigator.onLine) { await new Promise(r=>setTimeout(r,5000)); continue; }
-                    fetch(tileQueue.shift(), {mode:'no-cors'}).catch(()=>{});
+                    fetch(tileQueue.shift(), {mode:'cors'}).catch(()=>{});
                     tilesDone++;
                     
                     const pBar = document.getElementById('cache-progress');
@@ -471,7 +473,7 @@ function initializeDashboard(graphData) {
 
     // --- NODE SEARCH ---
     const datalist = document.getElementById('node-datalist');
-    const searchInput = document.getElementById('node-search');
+    const searchInput = document.getElementById('node-filter');
     if (datalist && searchInput) {
         let optionsHtml = '';
         graphData.nodes.forEach(n => {
@@ -481,33 +483,21 @@ function initializeDashboard(graphData) {
         });
         datalist.innerHTML = optionsHtml;
 
-        const originalPlaceholder = searchInput.placeholder || "🔍 Search Nodes...";
-        let errorTimeout;
-
-        const clearError = () => {
-            clearTimeout(errorTimeout);
-            searchInput.placeholder = originalPlaceholder;
-            searchInput.style.borderColor = '#555';
+        const showCenteredToast = (msg) => {
+            const toast = document.getElementById('centered-toast');
+            if (!toast) return;
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2000);
         };
-
-        searchInput.addEventListener('input', clearError);
-        searchInput.addEventListener('focus', clearError);
 
         searchInput.addEventListener('change', (e) => {
             const val = e.target.value.trim();
             if (!val) return;
 
-            const showError = (msg) => {
-                clearError();
-                e.target.value = '';
-                e.target.placeholder = msg;
-                e.target.style.borderColor = '#f44336';
-                errorTimeout = setTimeout(clearError, 3000);
-            };
-
-            const node = graphData.nodes.find(n => (n.long_name || n.short_name || n.id) === val || n.id === val);
+            const node = graphData.nodes.find(n => (n.long_name || n.short_name || n.id) === val || n.id === val || n.id.toString() === val.toString());
             if (!node) {
-                showError("❌ Node not found");
+                showCenteredToast("❌ Node not found in graph");
                 return;
             }
 
@@ -522,14 +512,10 @@ function initializeDashboard(graphData) {
                 } else {
                     map.setView([node.lat, node.lon], 16);
                 }
-                e.target.value = ''; // reset after opening
                 e.target.blur();
             } else {
-                e.target.value = '';
                 e.target.blur();
-                if (btnMap.classList.contains('active')) {
-                    showError("⚠️ Node lacks GPS fix");
-                }
+                showCenteredToast("⚠️ Node lacks GPS fix");
             }
         });
     }
@@ -670,10 +656,21 @@ function initializeDashboard(graphData) {
 
     // ponytail: settings modal logic
     const btnSettings = document.getElementById('btn-settings');
+    
+    // Resize listener for responsive terminal header
+    const mobileSearchInput = document.getElementById('node-filter');
+    if (mobileSearchInput) {
+        const updateNF = () => { mobileSearchInput.placeholder = window.innerWidth <= 768 ? "🔍 Node" : "Search Node ID..."; };
+        window.addEventListener('resize', updateNF);
+        updateNF();
+    }
+
+    const btnClearTerminal = document.getElementById('btn-clear-terminal');
     const settingsModal = document.getElementById('settings-modal');
     const btnSettingsClose = document.getElementById('btn-settings-close');
     const settingZoom = document.getElementById('setting-zoom');
     const settingDisableTours = document.getElementById('setting-disable-tours');
+    const settingColorByType = document.getElementById('setting-color-by-type'); // ponytail
     const btnCheckUpdates = document.getElementById('btn-check-updates');
     if (btnCheckUpdates) {
         btnCheckUpdates.addEventListener('click', async () => {
@@ -690,6 +687,20 @@ function initializeDashboard(graphData) {
                 const reg = await navigator.serviceWorker.getRegistration();
                 if (reg) await reg.update();
                 
+                // ponytail: native cache-busting fallback for stuck edge caches
+                const res = await fetch('/?t=' + Date.now(), { cache: 'no-store' });
+                const html = await res.text();
+                const scriptEl = document.querySelector('script[type="module"][src]');
+                const currentSrc = scriptEl ? scriptEl.getAttribute('src') : null;
+                
+                if (currentSrc && currentSrc.includes('assets/') && !html.includes(currentSrc)) {
+                    if (confirm("A new version is available! Refresh now to apply the update?")) {
+                        if (reg) await reg.unregister();
+                        window.location.reload();
+                    }
+                    return;
+                }
+
                 setTimeout(() => {
                     if (!window.updatePending) {
                         btnCheckUpdates.innerText = 'Up to date!';
@@ -745,6 +756,7 @@ function initializeDashboard(graphData) {
         btnSettings.addEventListener('click', async () => {
             settingZoom.value = localStorage.getItem('offline_zoom_level') || '10';
             settingDisableTours.checked = localStorage.getItem('disable_tours') === 'true';
+            if (settingColorByType) settingColorByType.checked = localStorage.getItem('color_by_type') === 'true'; // ponytail
             if (settingD3Spread) settingD3Spread.value = localStorage.getItem('d3_spread') || '-300';
             settingsModal.showModal();
             // ponytail: true cache size
@@ -768,6 +780,7 @@ function initializeDashboard(graphData) {
             const oldZ = localStorage.getItem('offline_zoom_level') || '10';
             localStorage.setItem('offline_zoom_level', settingZoom.value);
             localStorage.setItem('disable_tours', settingDisableTours.checked ? 'true' : 'false');
+            if (settingColorByType) localStorage.setItem('color_by_type', settingColorByType.checked ? 'true' : 'false'); // ponytail
             if (settingD3Spread) localStorage.setItem('d3_spread', settingD3Spread.value);
             settingsModal.close();
             
@@ -835,11 +848,11 @@ function initializeDashboard(graphData) {
         shadowUrl: '/images/marker-shadow.png'
     });
 
-    const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', maxZoom: 19, crossOrigin: true });
-    const satTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19, crossOrigin: true });
-    const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19, crossOrigin: true });
-    const topoTiles = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap', maxZoom: 17, crossOrigin: true });
-    const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19, crossOrigin: true });
+    const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', maxZoom: 19 });
+    const satTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
+    const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 });
+    const topoTiles = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap', maxZoom: 17 });
+    const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
     
     const map = L.map('map', { layers: [osmTiles] }).setView([0, 0], 2);
     window.leafletMap = map;
@@ -1110,9 +1123,9 @@ function initializeDashboard(graphData) {
     });
     window.leafletRouteLines = routeLines;
 
-    function animateSinglePacket(points) {
+    function animateSinglePacket(points, color = '#ffeb3b') {
         if (points.length < 2) return;
-        const icon = L.divIcon({ className: 'tracer-projectile', iconSize: [16, 16] }); // ponytail: bigger icon for visibility
+        const icon = L.divIcon({ className: '', iconSize: [16, 16], html: `<div style="width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 0 8px ${color}, 0 0 16px ${color}, 0 0 24px ${color};z-index:9000;"></div>` }); // ponytail: dynamic color icon
         const dot = L.marker(points[0], { icon: icon }).addTo(map);
 
         let currentSegment = 0, progress = 0;
@@ -1248,17 +1261,21 @@ function initializeDashboard(graphData) {
             });
 
         // Make D3 packet animation accessible globally
-        window.triggerD3Packet = function (fromId, toId) {
+        window.triggerD3Packet = function (fromId, toId, color = '#ffff00') {
             if (!fromId || !toId) return;
             const source = d3Nodes.find(n => n.id === fromId);
             const target = d3Nodes.find(n => n.id === toId);
             if (!source || !target) return;
 
             const tracer = g.append("circle")
-                .attr("class", "d3-tracer")
+                .attr("class", "") // ponytail: drop static class for dynamic colors
                 .attr("r", 6)
                 .attr("cx", source.x)
-                .attr("cy", source.y);
+                .attr("cy", source.y)
+                .attr("fill", "#ffffff")
+                .attr("stroke", color)
+                .attr("stroke-width", 1)
+                .style("filter", `drop-shadow(0 0 4px ${color}) drop-shadow(0 0 8px ${color}) drop-shadow(0 0 12px ${color})`);
 
             const speedMultiplier = parseFloat(document.getElementById('speed-control').value) || 1;
             const duration = Math.max(50, 500 / speedMultiplier); // Min 50ms to still be visible
@@ -1363,27 +1380,40 @@ function initializeDashboard(graphData) {
     const speedControl = document.getElementById('speed-control');
     let pktIdx = 0;
 
-    function pulseLeaflet(id) {
+    function getPacketColor(pkt) {
+        const colorByType = localStorage.getItem('color_by_type') === 'true';
+        const pktSig = colorByType ? (pkt.port || 'UNKNOWN') : ((pkt.sum || '') + (pkt.port || '') + (pkt.from || '') + (pkt.to || ''));
+        let hash = 0;
+        for (let i = 0; i < pktSig.length; i++) {
+            hash = pktSig.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return `hsl(${Math.abs(hash) % 360}, 100%, 65%)`;
+    }
+
+    function pulseLeaflet(id, color = '#ffeb3b') {
         if (!id) return;
         const m = markers[id];
         if (m) {
             if (m._path) {
-                const origColor = m.options.color;
-                const origWeight = m.options.weight;
-                m.setStyle({ color: '#ffeb3b', weight: 4 });
-                setTimeout(() => {
-                    m.setStyle({ color: origColor, weight: origWeight });
+                m._origColor = m._origColor || m.options.color;
+                m._origWeight = m._origWeight || m.options.weight;
+                m.setStyle({ color: color, weight: 4 });
+                clearTimeout(m._pulseTimeout2);
+                m._pulseTimeout2 = setTimeout(() => {
+                    m.setStyle({ color: m._origColor, weight: m._origWeight });
+                    m._origColor = null; m._origWeight = null;
                 }, 400);
             } else if (m._icon) {
-                m._icon.classList.add('leaflet-marker-highlight');
-                setTimeout(() => {
-                    if (m._icon) m._icon.classList.remove('leaflet-marker-highlight');
+                m._icon.style.filter = `drop-shadow(0 0 8px ${color}) drop-shadow(0 0 16px ${color})`;
+                clearTimeout(m._pulseTimeout);
+                m._pulseTimeout = setTimeout(() => {
+                    if (m._icon) m._icon.style.filter = '';
                 }, 400);
             }
         }
     }
 
-    function pulseD3(id) {
+    function pulseD3(id, color = '#ffeb3b') {
         if (!window.d3Initialized || !id) return;
         const safeId = String(id).replace(/[^a-zA-Z0-9]/g, '');
         const circle = d3.select('#d3-node-' + safeId);
@@ -1391,7 +1421,7 @@ function initializeDashboard(graphData) {
             const d = circle.datum();
             const baseR = (d && d.short_name === 'NXTW') ? 20 : 10;
             circle.transition().duration(100)
-                .attr("stroke", "#ffeb3b")
+                .attr("stroke", color)
                 .attr("stroke-width", 4)
                 .attr("r", baseR + 5)
                 .transition().duration(300)
@@ -1408,6 +1438,11 @@ function initializeDashboard(graphData) {
         const now = performance.now();
         const deltaReal = now - lastRealTime;
         lastRealTime = now;
+
+        if (window.isSimulationPaused) {
+            window._tickAnimFrame = requestAnimationFrame(tick);
+            return;
+        }
 
         const speedMult = parseFloat(speedControl.value) || 1;
         currentSimTime += deltaReal * speedMult;
@@ -1447,10 +1482,11 @@ function initializeDashboard(graphData) {
 
                 if (!skip) {
                     renderPacket(p);
+                    const pColor = getPacketColor(p);
                     if (p.port === 'POSITION_APP') {
-                        if (p.from) pulseLeaflet(p.from);
+                        if (p.from) pulseLeaflet(p.from, pColor);
                     } else {
-                        if (p.from) pulseD3(p.from);
+                        if (p.from) pulseD3(p.from, pColor);
                     }
                     renderedThisFrame++;
                 }
@@ -1478,14 +1514,20 @@ function initializeDashboard(graphData) {
         const ss = d.getSeconds().toString().padStart(2, '0');
         const ms = d.getMilliseconds().toString().padStart(3, '0');
         const timeStr = `[${hh}:${mm}:${ss}.${ms}]`;
+        
+        const pktColor = getPacketColor(pkt);
 
         const div = document.createElement('div');
         div.className = 'term-line';
+        
+        // ponytail: inject dynamic colors for the :last-child highlight
+        div.style.setProperty('--term-border', pktColor);
+        div.style.setProperty('--term-bg', pktColor.replace('hsl', 'hsla').replace(')', ', 0.15)'));
         div.dataset.port = (pkt.port || '').toUpperCase();
         div.dataset.from = (pkt.from || '').toLowerCase();
         div.dataset.to = (pkt.to || '').toLowerCase();
         div.dataset.sum = (pkt.sum || '').toLowerCase();
-        div.innerHTML = `<span style="color: #888; margin-right: 8px;">${timeStr}</span><span class="term-port">[${escapeHTML(pkt.port)}]</span><span class="term-from">FROM: ${escapeHTML(displayName)}</span><span class="term-sum">${escapeHTML(pkt.sum)}</span>`;
+        div.innerHTML = `<span style="color:${pktColor}; margin-right:6px; font-size:14px;">●</span><span style="color: #888; margin-right: 8px;">${timeStr}</span><span class="term-port">[${escapeHTML(pkt.port)}]</span><span class="term-from">FROM: ${escapeHTML(displayName)}</span><span class="term-sum">${escapeHTML(pkt.sum)}</span>`;
 
         div.onclick = () => {
             document.getElementById('dpi-modal').style.display = 'flex';
@@ -1499,8 +1541,8 @@ function initializeDashboard(graphData) {
         }
         termOut.scrollTop = termOut.scrollHeight;
 
-        pulseLeaflet(pkt.from);
-        pulseD3(pkt.from);
+        pulseLeaflet(pkt.from, pktColor);
+        pulseD3(pkt.from, pktColor);
 
         if (pkt.hops && pkt.hops.length > 1) {
             const points = [];
@@ -1508,19 +1550,19 @@ function initializeDashboard(graphData) {
                 const n = markers[hop.id];
                 if (n) points.push(n.getLatLng());
                 if (i < pkt.hops.length - 1 && window.triggerD3Packet) {
-                    window.triggerD3Packet(pkt.hops[i].id, pkt.hops[i + 1].id);
+                    window.triggerD3Packet(pkt.hops[i].id, pkt.hops[i + 1].id, pktColor);
                 }
             });
             if (points.length > 1) {
-                animateSinglePacket(points);
-                L.polyline(points, { color: '#ffeb3b', weight: 2, opacity: 0.6, dashArray: '5, 10' }).addTo(map); // ponytail: draw the line, no need to track it
+                animateSinglePacket(points, pktColor);
+                L.polyline(points, { color: pktColor, weight: 2, opacity: 0.6, dashArray: '5, 10' }).addTo(map); // ponytail: draw the line, no need to track it
             }
         } else if (pkt.to && pkt.to !== "!-1" && pkt.to !== "!ffffffff" && pkt.to !== pkt.from) {
             const p1 = markers[pkt.from];
             const p2 = markers[pkt.to];
-            if (p1 && p2) animateSinglePacket([p1.getLatLng(), p2.getLatLng()]);
+            if (p1 && p2) animateSinglePacket([p1.getLatLng(), p2.getLatLng()], pktColor);
             if (window.triggerD3Packet) {
-                window.triggerD3Packet(pkt.from, pkt.to);
+                window.triggerD3Packet(pkt.from, pkt.to, pktColor);
             }
         }
     }
@@ -1560,6 +1602,47 @@ function initializeDashboard(graphData) {
 
     document.getElementById('close-modal').addEventListener('click', () => {
         document.getElementById('dpi-modal').style.display = 'none';
+    });
+
+    // ponytail: one-click copy for json payloads
+    document.getElementById('copy-dpi-btn').addEventListener('click', async (e) => {
+        const payload = document.getElementById('dpi-payload').innerText;
+        await navigator.clipboard.writeText(payload);
+        const btn = e.target;
+        btn.innerText = 'Copied!';
+        setTimeout(() => btn.innerText = 'Copy', 2000);
+    });
+
+    // ponytail: one-click clear terminal
+    document.getElementById('clear-term-btn').addEventListener('click', () => {
+        document.getElementById('terminal-output').innerHTML = '';
+    });
+
+    // ponytail: pause simulation
+    window.isSimulationPaused = false;
+    document.getElementById('pause-sim-btn').addEventListener('click', (e) => {
+        window.isSimulationPaused = !window.isSimulationPaused;
+        const btn = e.target;
+        if (window.isSimulationPaused) {
+            btn.innerText = 'Resume';
+            btn.style.background = '#ff9800';
+            btn.style.borderColor = '#ff9800';
+        } else {
+            btn.innerText = 'Pause';
+            btn.style.background = '#333';
+            btn.style.borderColor = '#555';
+        }
+    });
+
+    // ponytail: global escape key to close all modals and panels
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const dpi = document.getElementById('dpi-modal');
+            if (dpi) dpi.style.display = 'none';
+            const panel = document.getElementById('node-analytics-panel');
+            if (panel) panel.classList.remove('open');
+            document.body.classList.remove('panel-open');
+        }
     });
 
     window._tickAnimFrame = requestAnimationFrame(tick);
