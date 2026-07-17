@@ -100,26 +100,25 @@ function getTurnstileToken() {
         // ponytail: stop hanging forever on locked Android WebViews
         let done = false;
         let wid;
-        const to = setTimeout(() => {
-            if(!done) { done = true; try { window.turnstile.remove(wid); } catch(e){} resolve(null); }
-        }, 60000);
+        const cleanup = (res) => {
+            if (done) return;
+            done = true;
+            clearTimeout(to);
+            try { window.turnstile.remove(wid); } catch (e) {}
+            resolve(res);
+        };
+        const to = setTimeout(() => cleanup(null), 60000);
         
         try {
             wid = window.turnstile.render('#cf-turnstile-widget', {
                 sitekey: '0x4AAAAAADoa_6pJqFVy3kJU',
                 action: 'turnstile-spin-v1',
-                callback: function (token) {
-                    if(!done) { done = true; clearTimeout(to); try{window.turnstile.remove(wid);}catch(e){} resolve(token); }
-                },
-                'error-callback': function () {
-                    if(!done) { done = true; clearTimeout(to); try{window.turnstile.remove(wid);}catch(e){} resolve(null); }
-                },
-                'timeout-callback': function () {
-                    if(!done) { done = true; clearTimeout(to); try{window.turnstile.remove(wid);}catch(e){} resolve(null); }
-                }
+                callback: token => cleanup(token),
+                'error-callback': () => cleanup(null),
+                'timeout-callback': () => cleanup(null)
             });
         } catch (e) {
-            if(!done) { done = true; clearTimeout(to); resolve(null); }
+            cleanup(null);
         }
     });
 }
@@ -1597,11 +1596,7 @@ function initializeDashboard(graphData) {
         const displayName = node ? (node.long_name || node.short_name || pkt.from) : pkt.from;
 
         const d = new Date(pkt.time);
-        const hh = d.getHours().toString().padStart(2, '0');
-        const mm = d.getMinutes().toString().padStart(2, '0');
-        const ss = d.getSeconds().toString().padStart(2, '0');
-        const ms = d.getMilliseconds().toString().padStart(3, '0');
-        const timeStr = `[${hh}:${mm}:${ss}.${ms}]`;
+        const timeStr = `[${d.toTimeString().substring(0, 8)}.${d.getMilliseconds().toString().padStart(3, '0')}]`;
         
         const pktColor = getPacketColor(pkt);
 
