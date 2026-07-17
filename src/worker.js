@@ -41,9 +41,11 @@ export default {
             method: "POST"
         });
         const outcome = await siteverifyResult.json();
-        if (!outcome.success) {
+        // ponytail: validate action and hostname
+        if (!outcome.success || outcome.action !== "turnstile-spin-v1" || !["meshlog.camal.eu", "localhost", "127.0.0.1", "mesh-log-mapper.xperia.workers.dev"].includes(outcome.hostname)) {
             return new Response("Forbidden: Turnstile verification failed", { status: 403, headers: { "Access-Control-Allow-Origin": "*" } });
         }
+
         
         // --- SIZE LIMIT CHECK (Max 25 MiB for KV) ---
         const graphStr = JSON.stringify(payload.graph || {});

@@ -99,22 +99,23 @@ function getTurnstileToken() {
         
         // ponytail: stop hanging forever on locked Android WebViews
         let done = false;
+        let wid;
         const to = setTimeout(() => {
-            if(!done) { done = true; try { window.turnstile.remove('#cf-turnstile-widget'); } catch(e){} resolve(null); }
-        }, 6000);
+            if(!done) { done = true; try { window.turnstile.remove(wid); } catch(e){} resolve(null); }
+        }, 60000);
         
         try {
-            window.turnstile.render('#cf-turnstile-widget', {
+            wid = window.turnstile.render('#cf-turnstile-widget', {
                 sitekey: '0x4AAAAAADoa_6pJqFVy3kJU',
                 action: 'turnstile-spin-v1',
                 callback: function (token) {
-                    if(!done) { done = true; clearTimeout(to); try{window.turnstile.remove('#cf-turnstile-widget');}catch(e){} resolve(token); }
+                    if(!done) { done = true; clearTimeout(to); try{window.turnstile.remove(wid);}catch(e){} resolve(token); }
                 },
                 'error-callback': function () {
-                    if(!done) { done = true; clearTimeout(to); resolve(null); }
+                    if(!done) { done = true; clearTimeout(to); try{window.turnstile.remove(wid);}catch(e){} resolve(null); }
                 },
                 'timeout-callback': function () {
-                    if(!done) { done = true; clearTimeout(to); resolve(null); }
+                    if(!done) { done = true; clearTimeout(to); try{window.turnstile.remove(wid);}catch(e){} resolve(null); }
                 }
             });
         } catch (e) {
@@ -196,10 +197,9 @@ window.addEventListener('load', () => {
     }
     const rmDiv = document.getElementById('recent-maps');
     if (rmDiv) {
-        rmDiv.innerHTML = `<div style="width:100%;text-align:center;color:#888;font-size:12px;">Recent Maps:</div>` + 
-            (recent.length > 0 
+        rmDiv.innerHTML = (recent.length > 0 
                 ? recent.map(id => `<a href="javascript:void(0)" onclick="window.loadMap('${id}')" style="color:#4caf50;text-decoration:none;border:1px solid #4caf50;padding:4px 8px;border-radius:4px;font-size:12px;">${id}</a>`).join('')
-                : `<span style="color:#555;font-size:12px;">None yet. Open a map to save it here.</span>`);
+                : `<span style="color:#555;font-size:12px;">None yet.</span>`);
     }
 
     if (mapId) {
@@ -900,6 +900,14 @@ function initializeDashboard(graphData) {
     const map = L.map('map', { layers: [osmTiles] }).setView([0, 0], 2);
     window.leafletMap = map;
     
+    // ponytail: bg click clears path
+    map.on('click', () => {
+        if (window.lastClickedNodeId) {
+            window.lastClickedNodeId = null;
+            highlightPath(null, null);
+        }
+    });
+    
     const baseMaps = {
         "OpenStreetMap (Offline Cache)": osmTiles,
         "Carto Dark": darkTiles,
@@ -961,8 +969,10 @@ function initializeDashboard(graphData) {
             window.history.replaceState(null, '', `#node=${node.id}`);
         }
 
-        document.getElementById('node-analytics-panel').classList.add('open');
-        document.body.classList.add('panel-open');
+        if (window.innerWidth > 768 || !window.lastClickedNodeId) {
+            document.getElementById('node-analytics-panel').classList.add('open');
+            document.body.classList.add('panel-open');
+        }
         setTimeout(() => { if (map) map.invalidateSize(); }, 300);
 
         document.getElementById('panel-node-name').innerText = node.long_name || node.short_name || node.id;
@@ -1045,14 +1055,7 @@ function initializeDashboard(graphData) {
             window.leafletRouteGroup = L.polyline(latlngs, {color: '#00e5ff', weight: 6, opacity: 0.8}).addTo(window.leafletMap);
         }
 
-        // dim un-highlighted Leaflet markers and lines
-        Object.keys(markers).forEach(id => {
-            if (!path || path.includes(id)) {
-                markers[id].setOpacity(1);
-            } else {
-                markers[id].setOpacity(0.3);
-            }
-        });
+        // ponytail: skip dimming geo map markers on route
         if (window.leafletRouteLines) {
             window.leafletRouteLines.forEach(line => {
                 if (!path) {
@@ -1246,7 +1249,13 @@ function initializeDashboard(graphData) {
             .attr("height", height)
             .call(d3.zoom().on("zoom", (event) => {
                 g.attr("transform", event.transform);
-            }));
+            }))
+            .on("click", (event) => {
+                if (event.target.tagName.toLowerCase() === 'svg' && window.lastClickedNodeId) {
+                    window.lastClickedNodeId = null;
+                    highlightPath(null, null);
+                }
+            });
 
         const g = svg.append("g");
         const tooltip = d3.select("#d3-tooltip");
@@ -1304,7 +1313,7 @@ function initializeDashboard(graphData) {
             .call(drag(simulation))
             .on("mouseover", (event, d) => {
                 tooltip.style("opacity", 1)
-                    .html(`<b>${escapeHTML(d.long_name || d.id)}</b><br>Traffic: ${d.traffic_volume} pkts<br><i style="font-size:10px;color:#aaa;">Click for Analytics</i>`)
+                    .html(`<b>${escapeHTML(d.long_name || d.id)}</b><br>Traffic: ${d.traffic_volume} pkts`)
                     .style("left", (event.pageX + 15) + "px")
                     .style("top", (event.pageY - 28) + "px");
             })
@@ -1312,7 +1321,16 @@ function initializeDashboard(graphData) {
                 tooltip.style("opacity", 0);
             })
             .on("click", (event, d) => {
-                openNodePanel(d.id);
+                // ponytail: path routing only, no invasive sidebar
+                if (window.lastClickedNodeId === d.id) {
+                    window.lastClickedNodeId = null;
+                    highlightPath(null, null);
+                } else {
+                    if (window.lastClickedNodeId) {
+                        highlightPath(window.lastClickedNodeId, d.id);
+                    }
+                    window.lastClickedNodeId = d.id;
+                }
             });
 
         // Make D3 packet animation accessible globally
@@ -1383,6 +1401,21 @@ function initializeDashboard(graphData) {
 
             node.attr("opacity", d => (!path || path.includes(d.id)) ? 1 : 0.2);
             labels.attr("opacity", d => (!path || path.includes(d.id)) ? 1 : 0.2);
+
+            // ponytail: native DOM hop counter
+            let hopCounter = document.getElementById('hop-counter');
+            if (!hopCounter) {
+                hopCounter = document.createElement('div');
+                hopCounter.id = 'hop-counter';
+                hopCounter.style.cssText = 'position:absolute;top:15px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#00e5ff;padding:4px 12px;border-radius:12px;font-weight:bold;z-index:999;pointer-events:none;font-size:14px;border:1px solid #00e5ff;box-shadow:0 0 8px #00e5ff;';
+                document.getElementById('d3-container').appendChild(hopCounter);
+            }
+            if (path && path.length > 1) {
+                hopCounter.innerText = `${path.length - 1} Hops`;
+                hopCounter.style.display = 'block';
+            } else {
+                hopCounter.style.display = 'none';
+            }
         };
 
         simulation.on("tick", () => {
