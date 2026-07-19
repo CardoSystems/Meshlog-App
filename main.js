@@ -68,6 +68,11 @@ const idb = {
 };
 const escapeHTML = str => String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
 
+window.goHome = async () => {
+    await idb.set('autoSave', null);
+    window.location.href = window.location.pathname;
+};
+
 // ponytail: shared helpers
 function setupShareButton() {
     const shareBtn = document.getElementById('btn-share');
