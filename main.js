@@ -1088,7 +1088,7 @@ function initializeDashboard(graphData) {
     graphData.nodes.forEach(node => {
         if (node.lat !== undefined && node.lon !== undefined) {
             const isSrc = node.id === maxVolNodeId;
-            const markerOptions = isSrc ? { icon: new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34] }) } : {};
+            const markerOptions = isSrc ? { icon: new L.Icon({ iconUrl: '/lib/leaflet/images/marker-icon-red.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34] }) } : {};
             const marker = L.marker([node.lat, node.lon], markerOptions).addTo(map);
             markers[node.id] = marker;
             latLngs.push([node.lat, node.lon]);
