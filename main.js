@@ -1763,6 +1763,8 @@ function initializeDashboard(graphData) {
                 mainContent.style.opacity = '1';
                 mainContent.style.pointerEvents = 'auto';
             }
+            const nt = document.getElementById('nav-toggle');
+            if (nt) nt.style.visibility = 'visible';
         };
 
         if (loader) {
