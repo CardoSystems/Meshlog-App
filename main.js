@@ -5,6 +5,7 @@ import { registerSW } from 'virtual:pwa-register';
 import { initThreeBg, disposeThreeBg } from './src/three-bg.js';
 // ponytail: native vite worker handling
 import ParserWorker from './parser.worker.js?worker';
+import { Preferences } from '@capacitor/preferences';
 
 window.updatePending = false;
 const updateSW = registerSW({
@@ -73,16 +74,35 @@ window.goHome = async () => {
     window.location.href = window.location.pathname;
 };
 
-// ponytail: shared helpers
+// ponytail: unified share URL builder and clipboard fallback
+window.copyShareLink = (hash = '', onSuccess) => {
+    const base = (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('capacitor')) ? 'https://meshlog.camal.eu' : window.location.origin;
+    let search = window.location.search;
+    if (!search && typeof graphData !== 'undefined' && graphData?.shareId) search = '?map=' + graphData.shareId;
+    const text = base + window.location.pathname + search + hash;
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(onSuccess).catch(() => {});
+    } else {
+        const input = document.createElement('textarea');
+        input.value = text;
+        document.body.appendChild(input);
+        input.select();
+        try { document.execCommand('copy'); onSuccess?.(); } catch (e) {}
+        document.body.removeChild(input);
+    }
+};
+
 function setupShareButton() {
     const shareBtn = document.getElementById('btn-share');
     if (!shareBtn) return;
     shareBtn.style.display = '';
     shareBtn.onclick = () => {
-        navigator.clipboard.writeText(window.location.href).catch(() => { });
-        const old = shareBtn.innerText;
-        shareBtn.innerText = '✅ Copied!';
-        setTimeout(() => shareBtn.innerText = old, 2000);
+        window.copyShareLink('', () => {
+            const old = shareBtn.innerText;
+            shareBtn.innerText = '✅ Copied!';
+            setTimeout(() => shareBtn.innerText = old, 2000);
+        });
     };
 }
 
@@ -160,7 +180,18 @@ function getTurnstileToken() {
     });
     requestWakeLock();
 
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
+    // ponytail: restore robust settings from Native Preferences to survive iOS/Android localstorage wiping
+    try {
+        const { value: prefSettingsStr } = await Preferences.get({ key: 'app_settings' });
+        if (prefSettingsStr) {
+            const savedSettings = JSON.parse(prefSettingsStr);
+            Object.entries(savedSettings).forEach(([k, v]) => v !== null && localStorage.setItem(k, v));
+        }
+        const { value: robustRecent } = await Preferences.get({ key: 'recentMaps' });
+        if (robustRecent) localStorage.setItem('recentMaps', robustRecent);
+    } catch(e) {}
+
     initThreeBg();
     const tsEl = document.getElementById('build-timestamp');
     if (tsEl && typeof __BUILD_TIMESTAMP__ !== 'undefined') {
@@ -184,6 +215,28 @@ window.addEventListener('load', () => {
 
     const urlParams = new URLSearchParams(window.location.search);
     let mapId = urlParams.get('map');
+    let sharedText = urlParams.get('text');
+
+    const ingestFile = (file) => {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        const input = document.getElementById('log-file-input');
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change'));
+    };
+
+    if (sharedText) {
+        ingestFile(new File([sharedText], "shared_log.txt", { type: "text/plain" }));
+    }
+
+    if ('launchQueue' in window) {
+        window.launchQueue.setConsumer(async (launchParams) => {
+            if (launchParams.files && launchParams.files.length > 0) {
+                const file = await launchParams.files[0].getFile();
+                ingestFile(file);
+            }
+        });
+    }
 
     window.loadMap = function(id) {
         window.history.pushState({}, '', '?map=' + id);
@@ -198,6 +251,7 @@ window.addEventListener('load', () => {
     if (mapId && !recent.includes(mapId)) {
         recent = [mapId, ...recent].slice(0, 5);
         localStorage.setItem('recentMaps', JSON.stringify(recent));
+        Preferences.set({ key: 'recentMaps', value: JSON.stringify(recent) });
     }
     const rmDiv = document.getElementById('recent-maps');
     if (rmDiv) {
@@ -287,7 +341,7 @@ window.addEventListener('load', () => {
             
             // ponytail: hyper-focus cache on Portugal bounding box up to zoom 12 (~3500 tiles) progressively
             const maxZ = parseInt(localStorage.getItem('offline_zoom_level') || '10', 10);
-            const activeUrl = Object.values(window.leafletMap?._layers || {}).find(l => l._url)?._url || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+            const activeUrl = Object.values(window.leafletMap?._layers || {}).find(l => l._url)?._url || 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
             for(let z=0; z<=maxZ; z++) {
                 const xMin = lon2tile(wLon, z);
@@ -584,57 +638,7 @@ function initializeDashboard(graphData) {
         };
     }
 
-    let meshDevice = null;
 
-    const setupLiveDevice = (device, btn) => {
-        btn.innerText = "🔴 Live (Radio Connected)";
-        btn.style.background = "rgba(244, 67, 54, 0.2)";
-        btn.style.borderColor = "rgba(244, 67, 54, 0.5)";
-        btn.style.color = "#f44336";
-        
-        device.events.onMessagePacket.subscribe((packet) => {
-            console.log("Live Packet Received:", packet);
-            // TODO: Map binary packets into window.graphData for incremental UI updates
-        });
-    };
-
-    document.body.addEventListener('click', async (e) => {
-        const btnUsb = e.target.closest('#btn-connect-usb');
-        const btnBle = e.target.closest('#btn-connect-ble');
-
-        if (btnUsb) {
-            console.log("Connect USB clicked");
-            try {
-                if (!meshDevice) {
-                    const port = await navigator.serial.requestPort();
-                    const transport = await TransportWebSerial.createFromPort(port);
-                    meshDevice = new MeshDevice(transport);
-                    await meshDevice.connect();
-                    setupLiveDevice(meshDevice, btnUsb);
-                }
-            } catch (err) {
-                console.error("USB connection error:", err);
-                alert("Could not connect to USB radio: " + err.message);
-            }
-        } else if (btnBle) {
-            console.log("Connect BLE clicked");
-            try {
-                if (!meshDevice) {
-                    const device = await navigator.bluetooth.requestDevice({
-                        filters: [{ namePrefix: 'Meshtastic' }],
-                        optionalServices: ['cb0b9a0b-a84c-4c07-8891-cb0b9a0c0001']
-                    });
-                    const transport = await TransportWebBluetooth.createFromDevice(device);
-                    meshDevice = new MeshDevice(transport);
-                    await meshDevice.connect();
-                    setupLiveDevice(meshDevice, btnBle);
-                }
-            } catch (err) {
-                console.error("Bluetooth connection error:", err);
-                alert("Could not connect to Bluetooth radio: " + err.message);
-            }
-        }
-    });
 
     // --- TERMINAL TOGGLE (GLOBAL) ---
     const terminalToggles = document.querySelectorAll('.term-toggle');
@@ -673,6 +677,7 @@ function initializeDashboard(graphData) {
     }
 
     btnSidebar.onclick = () => {
+        localStorage.setItem('active_tab', 'sidebar');
         btnSidebar.classList.add('active'); btnMap.classList.remove('active'); btnNet.classList.remove('active');
         mapDiv.style.display = 'none'; d3Div.style.display = 'none';
         sidebarDiv.style.display = 'flex';
@@ -682,6 +687,7 @@ function initializeDashboard(graphData) {
     };
 
     btnMap.onclick = () => {
+        localStorage.setItem('active_tab', 'map');
         btnMap.classList.add('active'); btnNet.classList.remove('active'); btnSidebar.classList.remove('active');
         mapDiv.style.display = 'block'; d3Div.style.display = 'none';
         sidebarDiv.style.display = 'none';
@@ -692,6 +698,7 @@ function initializeDashboard(graphData) {
     };
 
     btnNet.onclick = () => {
+        localStorage.setItem('active_tab', 'net');
         btnNet.classList.add('active'); btnMap.classList.remove('active'); btnSidebar.classList.remove('active');
         mapDiv.style.display = 'none'; d3Div.style.display = 'block';
         sidebarDiv.style.display = 'none';
@@ -700,6 +707,12 @@ function initializeDashboard(graphData) {
         }
         if (!window.d3Initialized) initD3Graph();
     };
+
+    // ponytail: restore tab state
+    const activeTab = localStorage.getItem('active_tab');
+    if (activeTab === 'net') btnNet.click();
+    else if (activeTab === 'sidebar') btnSidebar.click();
+
 
     // ponytail: settings modal logic
     const btnSettings = document.getElementById('btn-settings');
@@ -712,7 +725,7 @@ function initializeDashboard(graphData) {
         updateNF();
     }
 
-    const btnClearTerminal = document.getElementById('btn-clear-terminal');
+
     const settingsModal = document.getElementById('settings-modal');
     const btnSettingsClose = document.getElementById('btn-settings-close');
     const settingZoom = document.getElementById('setting-zoom');
@@ -829,6 +842,18 @@ function initializeDashboard(graphData) {
             localStorage.setItem('disable_tours', settingDisableTours.checked ? 'true' : 'false');
             if (settingColorByType) localStorage.setItem('color_by_type', settingColorByType.checked ? 'true' : 'false'); // ponytail
             if (settingD3Spread) localStorage.setItem('d3_spread', settingD3Spread.value);
+            
+            // ponytail: persist settings to native Preferences
+            Preferences.set({
+                key: 'app_settings',
+                value: JSON.stringify({
+                    offline_zoom_level: settingZoom.value,
+                    disable_tours: settingDisableTours.checked ? 'true' : 'false',
+                    color_by_type: settingColorByType && settingColorByType.checked ? 'true' : 'false',
+                    d3_spread: settingD3Spread ? settingD3Spread.value : null
+                })
+            });
+
             settingsModal.close();
             
             // ponytail: if zoom level changed, trigger background fetch of the current viewport
@@ -896,13 +921,42 @@ function initializeDashboard(graphData) {
     });
 
     const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', maxZoom: 19 });
+    const lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', maxZoom: 19 });
     const satTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
     const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 });
     const topoTiles = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap', maxZoom: 17 });
     const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
     
-    const map = L.map('map', { layers: [osmTiles] }).setView([0, 0], 2);
+    const baseMaps = {
+        "Carto Dark": darkTiles,
+        "Carto Light": lightTiles,
+        "OpenStreetMap (Offline Cache)": osmTiles,
+        "Open TOPO": topoTiles,
+        "ESRI World TOPO": esriTopo,
+        "ESRI Satellite": satTiles
+    };
+    
+    const savedLayerName = localStorage.getItem('selectedMapLayer') || "Carto Dark";
+    const defaultLayer = baseMaps[savedLayerName] || darkTiles;
+
+    const savedLat = localStorage.getItem('map_lat');
+    const savedLng = localStorage.getItem('map_lng');
+    const savedZoom = localStorage.getItem('map_zoom');
+    const center = (savedLat && savedLng) ? [parseFloat(savedLat), parseFloat(savedLng)] : [0, 0];
+    const zoom = savedZoom ? parseInt(savedZoom, 10) : 2;
+    const map = L.map('map', { layers: [defaultLayer] }).setView(center, zoom);
+    
+    map.on('moveend', () => {
+        const c = map.getCenter();
+        localStorage.setItem('map_lat', c.lat);
+        localStorage.setItem('map_lng', c.lng);
+        localStorage.setItem('map_zoom', map.getZoom());
+    });
     window.leafletMap = map;
+    
+    map.on('baselayerchange', function(e) {
+        localStorage.setItem('selectedMapLayer', e.name);
+    });
     
     // ponytail: bg click clears path
     map.on('click', () => {
@@ -912,13 +966,6 @@ function initializeDashboard(graphData) {
         }
     });
     
-    const baseMaps = {
-        "OpenStreetMap (Offline Cache)": osmTiles,
-        "Carto Dark": darkTiles,
-        "Open TOPO": topoTiles,
-        "ESRI World TOPO": esriTopo,
-        "ESRI Satellite": satTiles
-    };
     L.control.layers(baseMaps).addTo(map);
     
     // Disable online-only maps if offline
@@ -1112,12 +1159,7 @@ function initializeDashboard(graphData) {
 
         document.addEventListener('copyNodeLink', (e) => {
             const nodeId = e.detail;
-            let searchStr = window.location.search;
-            if (!searchStr && typeof graphData !== 'undefined' && graphData && graphData.shareId) {
-                searchStr = '?map=' + graphData.shareId;
-            }
-            const link = (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin) + window.location.pathname + searchStr + '#node=' + nodeId;
-            navigator.clipboard.writeText(link).then(() => {
+            window.copyShareLink('#node=' + nodeId, () => {
                 const toast = document.createElement('div');
                 toast.innerText = 'Copied to clipboard!';
                 toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#4caf50;color:white;padding:10px 20px;border-radius:20px;font-size:12px;z-index:999999;box-shadow:0 4px 10px rgba(0,0,0,0.5);opacity:0;transition:opacity 0.3s;';
@@ -1127,7 +1169,7 @@ function initializeDashboard(graphData) {
                     toast.style.opacity = '0';
                     setTimeout(() => toast.remove(), 300);
                 }, 2000);
-            }).catch(err => console.error('Could not copy text: ', err));
+            });
         });
     }
 
@@ -1684,9 +1726,26 @@ function initializeDashboard(graphData) {
     }
 
     const nf = document.getElementById('node-filter');
-    if (nf) nf.oninput = applyTerminalFilters;
+    if (nf) {
+        nf.value = localStorage.getItem('term_node_filter') || '';
+        nf.oninput = (e) => {
+            localStorage.setItem('term_node_filter', e.target.value);
+            applyTerminalFilters();
+        };
+    }
     const pf = document.getElementById('port-filter');
-    if (pf) pf.onchange = applyTerminalFilters;
+    if (pf) {
+        pf.value = localStorage.getItem('term_port_filter') || '';
+        pf.onchange = (e) => {
+            localStorage.setItem('term_port_filter', e.target.value);
+            applyTerminalFilters();
+        };
+    }
+    const sc = document.getElementById('speed-control');
+    if (sc) {
+        sc.value = localStorage.getItem('term_speed') || '1';
+        sc.onchange = (e) => localStorage.setItem('term_speed', e.target.value);
+    }
 
     document.getElementById('close-modal').onclick = () => {
         document.getElementById('dpi-modal').style.display = 'none';

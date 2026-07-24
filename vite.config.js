@@ -58,9 +58,36 @@ export default defineConfig({
             sizes: 'any',
             type: 'image/svg+xml'
           }
+        ],
+        file_handlers: [
+          {
+            action: '/',
+            accept: {
+              'text/plain': ['.txt']
+            }
+          }
+        ],
+        share_target: {
+          action: '/',
+          method: 'GET',
+          params: {
+            title: 'title',
+            text: 'text',
+            url: 'url'
+          }
+        },
+        shortcuts: [
+          {
+            name: 'Load Demo Map',
+            short_name: 'Demo',
+            description: 'Load the default demo map',
+            url: '/?map=30aexpfu',
+            icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }]
+          }
         ]
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,svg,png,txt,wasm}'],
         runtimeCaching: [
           {
@@ -82,76 +109,6 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/unpkg\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'unpkg-cache',
-              expiration: {
-                maxEntries: 20,
-                maxAgeSeconds: 60 * 60 * 24 * 365
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/cdn\.plot\.ly\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'plotly-cache',
-              expiration: {
-                maxEntries: 5,
-                maxAgeSeconds: 60 * 60 * 24 * 365
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/d3js\.org\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'd3-cache',
-              expiration: {
-                maxEntries: 5,
-                maxAgeSeconds: 60 * 60 * 24 * 365
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'jsdelivr-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/(?:code\.jquery\.com|ajax\.googleapis\.com)\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'jquery-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
             urlPattern: /^https:\/\/(?:[a-z]\.basemaps\.cartocdn\.com|server\.arcgisonline\.com|[a-z]\.tile\.openstreetmap\.org|[a-z]\.tile\.opentopomap\.org)\/.*/i,
             handler: 'CacheFirst',
             options: {
@@ -161,7 +118,7 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24 * 30
               },
               cacheableResponse: {
-                statuses: [200]
+                statuses: [0, 200]
               }
             }
           }
