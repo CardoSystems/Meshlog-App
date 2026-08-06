@@ -64,6 +64,49 @@ const idb = {
 };
 const escapeHTML = str => String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
 
+const renderRecentMaps = (recent) => {
+    if (!recent || recent.length === 0) {
+        const emptyHtml = `<span style="color:#666;font-size:12px;">No cached maps yet.</span>`;
+        ['recent-maps', 'landing-recent-maps'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = emptyHtml;
+        });
+        return;
+    }
+
+    const top5 = recent.slice(0, 5);
+    const others = recent.slice(5);
+
+    const top5Chips = top5.map(r => 
+        `<a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" class="recent-map-chip" title="${r.id}">${escapeHTML(r.name || r.id)}</a>`
+    ).join('');
+
+    let othersHtml = '';
+    if (others.length > 0) {
+        const othersItems = others.map(r => 
+            `<a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" class="recent-map-dropdown-item" title="${r.id}">${escapeHTML(r.name || r.id)}</a>`
+        ).join('');
+
+        othersHtml = `
+            <div class="recent-maps-others-container">
+                <button type="button" class="recent-maps-others-btn" onclick="this.nextElementSibling.classList.toggle('open'); this.classList.toggle('active');">
+                    Others (${others.length}) ▾
+                </button>
+                <div class="recent-maps-dropdown">
+                    ${othersItems}
+                </div>
+            </div>
+        `;
+    }
+
+    const containerHtml = `<div class="recent-maps-top5">${top5Chips}</div>${othersHtml}`;
+
+    ['recent-maps', 'landing-recent-maps'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = containerHtml;
+    });
+};
+
 window.goHome = async () => {
     await idb.set('autoSave', null);
     window.location.href = window.location.pathname;
@@ -246,16 +289,11 @@ window.addEventListener('load', async () => {
     let recent = JSON.parse(localStorage.getItem('recentMaps') || '[]');
     recent = recent.map(r => typeof r === 'string' ? { id: r, name: r } : r);
     if (mapId && !recent.some(r => r.id === mapId)) {
-        recent = [{ id: mapId, name: mapId }, ...recent].slice(0, 5);
+        recent = [{ id: mapId, name: mapId }, ...recent.filter(r => r.id !== mapId)];
         localStorage.setItem('recentMaps', JSON.stringify(recent));
         Preferences.set({ key: 'recentMaps', value: JSON.stringify(recent) });
     }
-    const rmDiv = document.getElementById('recent-maps');
-    if (rmDiv) {
-        rmDiv.innerHTML = (recent.length > 0
-            ? recent.map(r => `<a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" style="color:#4caf50;text-decoration:none;border:1px solid #4caf50;padding:4px 8px;border-radius:4px;font-size:12px;" title="${r.id}">${escapeHTML(r.name || r.id)}</a>`).join('')
-            : `<span style="color:#555;font-size:12px;">None yet.</span>`);
-    }
+    renderRecentMaps(recent);
 
     if (mapId) {
         document.getElementById('loading-text').innerText = "DOWNLOADING SHARED MAP...";
@@ -466,7 +504,31 @@ window.addEventListener('load', async () => {
         }
     }, 500);
 
+    // ponytail: global settings modal handler (landing screen + dashboard)
+    const openSettings = () => {
+        const modal = document.getElementById('settings-modal');
+        if (!modal) return;
+        const tours = document.getElementById('setting-disable-tours');
+        const spread = document.getElementById('setting-d3-spread');
+        if (tours) tours.checked = localStorage.getItem('disable_tours') === 'true';
+        if (spread) spread.value = localStorage.getItem('d3_spread') || '-1000';
+        modal.showModal();
+    };
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#btn-settings, #btn-landing-settings')) openSettings();
+    });
 
+    const btnSettingsClose = document.getElementById('btn-settings-close');
+    if (btnSettingsClose) {
+        btnSettingsClose.addEventListener('click', () => {
+            const tours = document.getElementById('setting-disable-tours');
+            const spread = document.getElementById('setting-d3-spread');
+            if (tours) localStorage.setItem('disable_tours', tours.checked ? 'true' : 'false');
+            if (spread) localStorage.setItem('d3_spread', spread.value);
+            const modal = document.getElementById('settings-modal');
+            if (modal) modal.close();
+        });
+    }
 });
 
 // ponytail: request persistent storage so the OS never deletes our cached map tiles when low on space. 
@@ -489,14 +551,13 @@ function initializeDashboard(graphData) {
             mapEntry.name = graphData.customMapName;
             updated = true;
         } else if (!mapEntry) {
-            recent = [{ id: graphData.shareId, name: graphData.customMapName }, ...recent].slice(0, 5);
+            recent = [{ id: graphData.shareId, name: graphData.customMapName }, ...recent.filter(r => r.id !== graphData.shareId)];
             updated = true;
         }
         if (updated) {
             localStorage.setItem('recentMaps', JSON.stringify(recent));
             Preferences.set({ key: 'recentMaps', value: JSON.stringify(recent) });
-            const rmDiv = document.getElementById('recent-maps');
-            if (rmDiv) rmDiv.innerHTML = recent.map(r => `<a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" style="color:#4caf50;text-decoration:none;border:1px solid #4caf50;padding:4px 8px;border-radius:4px;font-size:12px;" title="${r.id}">${escapeHTML(r.name || r.id)}</a>`).join('');
+            renderRecentMaps(recent);
         }
     }
 
@@ -670,10 +731,6 @@ function initializeDashboard(graphData) {
     else if (activeTab === 'sidebar') btnLongestLinks.click();
 
 
-    // ponytail: settings modal logic
-    const btnSettings = document.getElementById('btn-settings');
-    const btnLandingSettings = document.getElementById('btn-landing-settings');
-
     // Resize listener for responsive terminal header
     const mobileSearchInput = document.getElementById('node-filter');
     if (mobileSearchInput) {
@@ -681,14 +738,6 @@ function initializeDashboard(graphData) {
         window.addEventListener('resize', updateNF);
         updateNF();
     }
-
-
-    const settingsModal = document.getElementById('settings-modal');
-    const btnSettingsClose = document.getElementById('btn-settings-close');
-    const settingZoom = document.getElementById('setting-zoom');
-    const settingDisableTours = document.getElementById('setting-disable-tours');
-    const settingColorByType = document.getElementById('setting-color-by-type'); // ponytail
-
 
     const settingD3Spread = document.getElementById('setting-d3-spread');
     const btnResetSpread = document.getElementById('btn-reset-spread');
@@ -714,34 +763,6 @@ function initializeDashboard(graphData) {
                 window.d3Simulation.alpha(1).restart();
             }
         });
-    }
-
-    const openSettings = async () => {
-        if (!settingsModal) return;
-        settingDisableTours.checked = localStorage.getItem('disable_tours') === 'true';
-        if (settingD3Spread) settingD3Spread.value = localStorage.getItem('d3_spread') || '-1000';
-        settingsModal.showModal();
-    };
-
-    if (btnSettings) btnSettings.addEventListener('click', openSettings);
-    if (btnLandingSettings) btnLandingSettings.addEventListener('click', openSettings);
-
-    if (btnSettingsClose) {
-        btnSettingsClose.addEventListener('click', () => {
-            localStorage.setItem('disable_tours', settingDisableTours.checked ? 'true' : 'false');
-            if (settingD3Spread) localStorage.setItem('d3_spread', settingD3Spread.value);
-
-            Preferences.set({
-                key: 'app_settings',
-                value: JSON.stringify({
-                    disable_tours: settingDisableTours.checked ? 'true' : 'false',
-                    d3_spread: settingD3Spread ? settingD3Spread.value : null
-                })
-            });
-
-            settingsModal.close();
-        });
-
     }
 
 

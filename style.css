@@ -1267,28 +1267,144 @@ button:active, .button:active, .term-toggle:active {
     transform: scale(0.96);
 }
 
-/* Landing Screen Settings Outline Button (no infill) */
-.landing-settings-btn {
+/* Landing Screen My Maps Card */
+.landing-maps-card {
+    margin-top: 4px;
+    width: 100%;
+    max-width: 420px;
+    background: rgba(22, 27, 34, 0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.landing-maps-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: #4caf50;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.recent-maps-list {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    min-height: 28px;
+}
+
+.recent-maps-top5 {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.recent-maps-others-container {
+    margin-top: 10px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.recent-maps-others-btn {
     background: transparent;
-    color: #e0e0e0;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    padding: 8px 18px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
+    color: #81c784;
+    border: 1px dashed rgba(76, 175, 80, 0.4);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
     cursor: pointer;
-    letter-spacing: 0.5px;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    transition: all 0.15s ease;
 }
 
-.landing-settings-btn:hover {
-    border-color: #00bcd4;
-    color: #00bcd4;
-    box-shadow: 0 0 12px rgba(0, 188, 212, 0.3);
-    background: rgba(0, 188, 212, 0.05);
+.recent-maps-others-btn:hover, .recent-maps-others-btn.active {
+    background: rgba(76, 175, 80, 0.15);
+    border-color: #4caf50;
+    color: #4caf50;
 }
 
-.landing-settings-btn:active {
+.recent-maps-dropdown {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    max-width: 320px;
+    max-height: 180px;
+    overflow-y: auto;
+    margin-top: 8px;
+    background: #181d24;
+    border: 1px solid rgba(76, 175, 80, 0.25);
+    border-radius: 8px;
+    padding: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(76, 175, 80, 0.4) transparent;
+}
+
+.recent-maps-dropdown.open {
+    display: flex;
+}
+
+.recent-maps-dropdown::-webkit-scrollbar {
+    width: 4px;
+}
+
+.recent-maps-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(76, 175, 80, 0.3);
+    border-radius: 4px;
+}
+
+.recent-map-dropdown-item {
+    color: #e0e0e0;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    text-decoration: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.recent-map-dropdown-item:hover {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+}
+
+.recent-map-chip {
+    color: #4caf50;
+    background: rgba(76, 175, 80, 0.08);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.recent-map-chip:hover {
+    background: rgba(76, 175, 80, 0.2);
+    border-color: #4caf50;
+    color: #81c784;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+}
+
+.recent-map-chip:active {
     transform: scale(0.96);
 }
 
