@@ -68,6 +68,18 @@ self.onmessage = async function(e) {
       const linkMap = new Map(); // "A-B" -> {source, target, snrs: []}
       const routePaths = []; 
       const packetLog = []; // Terminal time-lapse
+      const hopStats = { hop1: 0, hop2: 0, hop3Plus: 0, total: 0 };
+
+      function getDistanceKm(lat1, lon1, lat2, lon2) {
+        const R = 6371; // km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return Math.round((R * c) * 100) / 100;
+      }
       
       const getNode = (id) => {
         if (!nodes.has(id)) {
@@ -87,13 +99,26 @@ self.onmessage = async function(e) {
         const node = getNode(packet.from);
         node.traffic_volume += 1;
         
+        const p = packet.payload || '';
+        if (packet.via_mqtt) {
+            node.mqtt_packets_count = (node.mqtt_packets_count || 0) + 1;
+        } else {
+            node.rf_packets_count = (node.rf_packets_count || 0) + 1;
+        }
+
+        if (p.includes('is_gateway=true') || p.includes('is_gateway=1')) {
+            node.is_gateway = true;
+        }
+        const gwMatch = p.match(/gateway_id=(![0-9a-fA-F]+)/);
+        if (gwMatch) {
+            getNode(gwMatch[1]).is_gateway = true;
+        }
+
         if (packet.to && packet.to !== "!-1" && packet.to !== "!ffffffff") {
              getNode(packet.to).traffic_volume += 1;
         }
 
         if (!packet.portnum) return;
-        
-        const p = packet.payload || '';
         
         // Push to terminal feed (include non-allowed ports for reality effect)
         let summary = p.replace(/\n/g, ' ');
@@ -109,24 +134,32 @@ self.onmessage = async function(e) {
         packetLog.push(logEntry);
         
         // NOISE FILTERING for parsing
-        const allowedPorts = ['POSITION_APP', 'TELEMETRY_APP', 'NODEINFO_APP', 'TRACEROUTE_APP'];
+        const allowedPorts = ['POSITION_APP', 'TELEMETRY_APP', 'NODEINFO_APP', 'TRACEROUTE_APP', 'ADMIN_APP'];
         if (!allowedPorts.includes(packet.portnum)) return;
 
-        if (packet.portnum === 'NODEINFO_APP' && p.startsWith('User{')) {
+        if (packet.portnum === 'ADMIN_APP' && p.includes('role=')) {
+            const roleMatch = p.match(/role=([A-Z_]+)/);
+            if (roleMatch) node.role = roleMatch[1];
+        }
+        else if (packet.portnum === 'NODEINFO_APP' && p.startsWith('User{')) {
             const ln = p.match(/long_name=([^,}]+)/);
             const sn = p.match(/short_name=([^,}]+)/);
             const hw = p.match(/hw_model=([^,}]+)/);
             const idm = p.match(/id=(![0-9a-fA-F]+)/);
+            const rm = p.match(/role=([A-Z_]+)/);
             
             if (ln) node.long_name = ln[1];
             if (sn) node.short_name = sn[1];
             if (hw) node.hw_model = hw[1];
             if (idm) node.hexId = idm[1];
+            if (rm) node.role = rm[1];
         } 
         else if (packet.portnum === 'POSITION_APP' && p.startsWith('Position{')) {
             const latMatch = p.match(/latitude_i=(-?\d+)/);
             const lonMatch = p.match(/longitude_i=(-?\d+)/);
             const altMatch = p.match(/altitude=(-?\d+)/);
+            const pdopMatch = p.match(/PDOP=(\d+)/);
+            const satsMatch = p.match(/sats_in_view=(\d+)/);
             
             if (latMatch && lonMatch) {
                 node.lat = parseInt(latMatch[1], 10) / 1e7;
@@ -137,6 +170,8 @@ self.onmessage = async function(e) {
                 }
             }
             if (altMatch) node.altitude = parseInt(altMatch[1], 10);
+            if (pdopMatch) node.pdop = parseInt(pdopMatch[1], 10);
+            if (satsMatch) node.sats_in_view = parseInt(satsMatch[1], 10);
         }
         else if (packet.portnum === 'TELEMETRY_APP' && p.startsWith('Telemetry{')) {
             let telem = {};
@@ -146,12 +181,14 @@ self.onmessage = async function(e) {
             const chMatch = p.match(/channel_utilization=([\d.]+)/);
             const txMatch = p.match(/air_util_tx=([\d.]+)/);
             const tmpMatch = p.match(/temperature=([\d.]+)/);
+            const upMatch = p.match(/uptime_seconds=(\d+)/);
             
             if (batMatch) telem.battery_level = parseInt(batMatch[1], 10);
             if (volMatch) telem.voltage = parseFloat(volMatch[1]);
             if (chMatch) telem.channel_utilization = parseFloat(chMatch[1]);
             if (txMatch) telem.air_util_tx = parseFloat(txMatch[1]);
             if (tmpMatch) telem.temperature = parseFloat(tmpMatch[1]);
+            if (upMatch) telem.uptime_seconds = parseInt(upMatch[1], 10);
             
             if (Object.keys(telem).length > 0) {
                 telem.logRef = logEntry;
@@ -184,12 +221,21 @@ self.onmessage = async function(e) {
             const validHops = hops.filter(h => h.id !== '!ffffffff' && h.id !== '!-1');
             
             if (validHops.length > 1) {
-                validHops.forEach(h => getNode(h.id));
+                validHops.forEach(h => {
+                    const n = getNode(h.id);
+                    n.has_rf_link = true;
+                });
                 routePaths.push({
                     from: packet.from,
                     hops: validHops
                 });
                 logEntry.hops = validHops; // Attach hops to terminal feed for animation
+
+                const numHops = validHops.length - 1;
+                if (numHops === 1) hopStats.hop1++;
+                else if (numHops === 2) hopStats.hop2++;
+                else if (numHops >= 3) hopStats.hop3Plus++;
+                hopStats.total++;
                 
                 for (let i = 0; i < validHops.length - 1; i++) {
                     const source = validHops[i].id;
@@ -229,9 +275,11 @@ self.onmessage = async function(e) {
             if (line.startsWith('MeshPacket{')) {
                 const fromMatch = line.match(/from=(-?\d+)/);
                 const toMatch = line.match(/to=(-?\d+)/);
+                const mqttMatch = line.match(/via_mqtt=(true|false)/);
                 currentPacket = {
                     from: fromMatch ? toHexId(parseInt(fromMatch[1], 10)) : null,
                     to: toMatch ? toHexId(parseInt(toMatch[1], 10)) : null,
+                    via_mqtt: mqttMatch ? mqttMatch[1] === 'true' : false,
                     portnum: null,
                     payload: ""
                 };
@@ -291,6 +339,23 @@ self.onmessage = async function(e) {
         if (node.lat === undefined || node.lon === undefined) {
           unmappedNodes.add(id);
         }
+        const nameStr = ((node.long_name || '') + ' ' + (node.short_name || '')).toUpperCase();
+        if (/\bGW\b|\bGATEWAY\b|[-_\[(]GW[-_\])]/i.test(nameStr)) {
+            node.is_gateway = true;
+        }
+
+        const hasMqtt = (node.mqtt_packets_count || 0) > 0;
+        const hasRf = (node.rf_packets_count || 0) > 0 || !!node.has_rf_link;
+        if (hasMqtt && hasRf) {
+            node.transport_type = 'HYBRID';
+            node.via_mqtt = false;
+        } else if (hasMqtt) {
+            node.transport_type = 'MQTT';
+            node.via_mqtt = true;
+        } else {
+            node.transport_type = 'RF';
+            node.via_mqtt = false;
+        }
       }
 
       const d3Edges = Array.from(linkMap.values()).map(link => {
@@ -301,12 +366,36 @@ self.onmessage = async function(e) {
           return { source: link.source, target: link.target, snr: avgSnr };
       });
 
+      const longestLinks = [];
+      d3Edges.forEach(edge => {
+          const src = nodes.get(edge.source);
+          const tgt = nodes.get(edge.target);
+          if (src && tgt && src.lat !== undefined && tgt.lat !== undefined) {
+              const dist = getDistanceKm(src.lat, src.lon, tgt.lat, tgt.lon);
+              edge.distanceKm = dist;
+              if (dist > 0) {
+                  longestLinks.push({
+                      source: src.id,
+                      target: tgt.id,
+                      sourceName: src.long_name || src.short_name || src.id,
+                      targetName: tgt.long_name || tgt.short_name || tgt.id,
+                      distanceKm: dist,
+                      snr: edge.snr
+                  });
+              }
+          }
+      });
+      longestLinks.sort((a, b) => b.distanceKm - a.distanceKm);
+
       const graph = {
-        nodes: Array.from(nodes.values()),
-        edges: d3Edges,
-        routePaths: routePaths,
-        unmapped: Array.from(unmappedNodes),
-        packetLog: packetLog
+          nodes: Array.from(nodes.values()),
+          edges: d3Edges,
+          routePaths: routePaths,
+          unmapped: Array.from(unmappedNodes),
+          packetLog: packetLog,
+          longestLinks: longestLinks.slice(0, 100),
+          hopStats: hopStats,
+          customMapName: e.data.customName
       };
 
       // --- ATOMIC TIME INTERPOLATION ---

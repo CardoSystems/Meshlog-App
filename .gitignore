@@ -32,3 +32,13 @@ tests/
 playwright.config.js
 scripts/
 test_tour.js
+
+# Data Dumps & Trash
+events.json
+meshtastic_debug_*.txt
+*.txt
+
+# Environment
+.env
+.env.*
+!.env.example

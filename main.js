@@ -12,11 +12,6 @@ const updateSW = registerSW({
     onNeedRefresh() {
         console.log("New version detected.");
         window.updatePending = true;
-        const btnCheckUpdates = document.getElementById('btn-check-updates');
-        if (btnCheckUpdates) {
-            btnCheckUpdates.innerText = 'Install Update';
-            btnCheckUpdates.style.background = '#e91e63';
-        }
         if (confirm("A new version is available! Refresh now to apply the update?")) {
             updateSW(true);
         }
@@ -79,6 +74,7 @@ window.copyShareLink = (hash = '', onSuccess) => {
     const base = (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('capacitor')) ? 'https://meshlog.camal.eu' : window.location.origin;
     let search = window.location.search;
     if (!search && typeof graphData !== 'undefined' && graphData?.shareId) search = '?map=' + graphData.shareId;
+    if (typeof graphData !== 'undefined' && graphData?.customMapName && !search.includes('&name=')) search += '&name=' + encodeURIComponent(graphData.customMapName);
     const text = base + window.location.pathname + search + hash;
 
     if (navigator.clipboard && window.isSecureContext) {
@@ -248,15 +244,16 @@ window.addEventListener('load', async () => {
 
     // ponytail: memory logic
     let recent = JSON.parse(localStorage.getItem('recentMaps') || '[]');
-    if (mapId && !recent.includes(mapId)) {
-        recent = [mapId, ...recent].slice(0, 5);
+    recent = recent.map(r => typeof r === 'string' ? { id: r, name: r } : r);
+    if (mapId && !recent.some(r => r.id === mapId)) {
+        recent = [{ id: mapId, name: mapId }, ...recent].slice(0, 5);
         localStorage.setItem('recentMaps', JSON.stringify(recent));
         Preferences.set({ key: 'recentMaps', value: JSON.stringify(recent) });
     }
     const rmDiv = document.getElementById('recent-maps');
     if (rmDiv) {
         rmDiv.innerHTML = (recent.length > 0 
-                ? recent.map(id => `<a href="javascript:void(0)" onclick="window.loadMap('${id}')" style="color:#4caf50;text-decoration:none;border:1px solid #4caf50;padding:4px 8px;border-radius:4px;font-size:12px;">${id}</a>`).join('')
+                ? recent.map(r => `<a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" style="color:#4caf50;text-decoration:none;border:1px solid #4caf50;padding:4px 8px;border-radius:4px;font-size:12px;" title="${r.id}">${escapeHTML(r.name || r.id)}</a>`).join('')
                 : `<span style="color:#555;font-size:12px;">None yet.</span>`);
     }
 
@@ -276,7 +273,7 @@ window.addEventListener('load', async () => {
     } else {
         idb.get('autoSave').then(data => {
             if (data) {
-                if (data.shareId) window.history.replaceState({}, '', '?map=' + data.shareId);
+                if (data.shareId) window.history.replaceState({}, '', '?map=' + data.shareId + (data.customMapName ? '&name=' + encodeURIComponent(data.customMapName) : ''));
                 document.getElementById('loading-spinner-container').style.display = 'flex';
                 document.getElementById('file-picker-container').style.display = 'none';
                 document.getElementById('loading-text').innerText = "RESTORING LOCAL SESSION...";
@@ -467,7 +464,7 @@ window.addEventListener('load', async () => {
                 }
             }, 100);
         } else if (e.data.type === 'SYNC_DONE') {
-            window.history.replaceState({}, '', '?map=' + e.data.shareId);
+            window.history.replaceState({}, '', '?map=' + e.data.shareId + (typeof graphData !== 'undefined' && graphData?.customMapName ? '&name=' + encodeURIComponent(graphData.customMapName) : ''));
             if (typeof graphData !== 'undefined' && graphData) {
                 graphData.shareId = e.data.shareId;
                 idb.set('autoSave', graphData);
@@ -489,8 +486,9 @@ window.addEventListener('load', async () => {
         document.getElementById('file-picker-container').style.display = 'none';
         document.getElementById('loading-spinner-container').style.display = 'flex';
         const token = await getTurnstileToken();
+        const customMapName = prompt("Name this map:", "My Meshlog Map") || "My Meshlog Map";
         document.getElementById('loading-text').innerText = "NUCLEAR REACTOR 4 STARTING...";
-        worker.postMessage({ cmd: 'parse_file', file: file, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
+        worker.postMessage({ cmd: 'parse_file', file: file, customName: customMapName, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
     });
 
     // Global drag and drop support
@@ -509,8 +507,9 @@ window.addEventListener('load', async () => {
         showLoadingScreen();
 
         const token = await getTurnstileToken();
+        const customMapName = prompt("Name this map:", "My Meshlog Map") || "My Meshlog Map";
         document.getElementById('loading-text').innerText = "NUCLEAR REACTOR 4 STARTING...";
-        worker.postMessage({ cmd: 'parse_file', file: file, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
+        worker.postMessage({ cmd: 'parse_file', file: file, customName: customMapName, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
     });
 
     // Test environment mock trigger
@@ -542,6 +541,27 @@ if (navigator.storage && navigator.storage.persist) {
 
 function initializeDashboard(graphData) {
     idb.set('autoSave', graphData); // ponytail: auto-save locally to survive refresh
+    
+    if (graphData.shareId && graphData.customMapName) {
+        let recent = JSON.parse(localStorage.getItem('recentMaps') || '[]');
+        recent = recent.map(r => typeof r === 'string' ? { id: r, name: r } : r);
+        let updated = false;
+        const mapEntry = recent.find(r => r.id === graphData.shareId);
+        if (mapEntry && mapEntry.name !== graphData.customMapName) {
+            mapEntry.name = graphData.customMapName;
+            updated = true;
+        } else if (!mapEntry) {
+            recent = [{ id: graphData.shareId, name: graphData.customMapName }, ...recent].slice(0, 5);
+            updated = true;
+        }
+        if (updated) {
+            localStorage.setItem('recentMaps', JSON.stringify(recent));
+            Preferences.set({ key: 'recentMaps', value: JSON.stringify(recent) });
+            const rmDiv = document.getElementById('recent-maps');
+            if (rmDiv) rmDiv.innerHTML = recent.map(r => `<a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" style="color:#4caf50;text-decoration:none;border:1px solid #4caf50;padding:4px 8px;border-radius:4px;font-size:12px;" title="${r.id}">${escapeHTML(r.name || r.id)}</a>`).join('');
+        }
+    }
+
     // ponytail: simple scan for central node
     const maxVolNodeId = graphData.nodes.reduce((m, n) => (n.traffic_volume || 0) > (m.traffic_volume || 0) ? n : m, graphData.nodes[0] || {}).id;
 
@@ -557,17 +577,18 @@ function initializeDashboard(graphData) {
             showLoadingScreen();
 
             const token = await getTurnstileToken();
+            const customMapName = prompt("Name this map:", "My Meshlog Map") || "My Meshlog Map";
 
             document.getElementById('loading-text').innerText = "NUCLEAR REACTOR 4 STARTING...";
 
-            worker.postMessage({ cmd: 'parse_file', file: file, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
+            worker.postMessage({ cmd: 'parse_file', file: file, customName: customMapName, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
         };
     }
 
     // --- VIEW TOGGLE LOGIC ---
     const btnMap = document.getElementById('btn-map');
     const btnNet = document.getElementById('btn-net');
-    const btnSidebar = document.getElementById('btn-sidebar');
+    const btnLongestLinks = document.getElementById('btn-longest-links');
     const mapDiv = document.getElementById('map');
     const d3Div = document.getElementById('d3-container');
     const sidebarDiv = document.getElementById('sidebar');
@@ -676,19 +697,16 @@ function initializeDashboard(graphData) {
         });
     }
 
-    btnSidebar.onclick = () => {
+    btnLongestLinks.onclick = () => {
         localStorage.setItem('active_tab', 'sidebar');
-        btnSidebar.classList.add('active'); btnMap.classList.remove('active'); btnNet.classList.remove('active');
+        btnLongestLinks.classList.add('active'); btnMap.classList.remove('active'); btnNet.classList.remove('active');
         mapDiv.style.display = 'none'; d3Div.style.display = 'none';
         sidebarDiv.style.display = 'flex';
-        if (window.runUnmappedTour && !localStorage.getItem('tour_unmapped_seen') && localStorage.getItem('disable_tours') !== 'true') {
-            setTimeout(() => window.runUnmappedTour(), 200);
-        }
     };
 
     btnMap.onclick = () => {
         localStorage.setItem('active_tab', 'map');
-        btnMap.classList.add('active'); btnNet.classList.remove('active'); btnSidebar.classList.remove('active');
+        btnMap.classList.add('active'); btnNet.classList.remove('active'); btnLongestLinks.classList.remove('active');
         mapDiv.style.display = 'block'; d3Div.style.display = 'none';
         sidebarDiv.style.display = 'none';
         setTimeout(() => map.invalidateSize(), 100);
@@ -699,7 +717,7 @@ function initializeDashboard(graphData) {
 
     btnNet.onclick = () => {
         localStorage.setItem('active_tab', 'net');
-        btnNet.classList.add('active'); btnMap.classList.remove('active'); btnSidebar.classList.remove('active');
+        btnNet.classList.add('active'); btnMap.classList.remove('active'); btnLongestLinks.classList.remove('active');
         mapDiv.style.display = 'none'; d3Div.style.display = 'block';
         sidebarDiv.style.display = 'none';
         if (window.runNetTour && !localStorage.getItem('tour_net_seen') && localStorage.getItem('disable_tours') !== 'true') {
@@ -711,7 +729,7 @@ function initializeDashboard(graphData) {
     // ponytail: restore tab state
     const activeTab = localStorage.getItem('active_tab');
     if (activeTab === 'net') btnNet.click();
-    else if (activeTab === 'sidebar') btnSidebar.click();
+    else if (activeTab === 'sidebar') btnLongestLinks.click();
 
 
     // ponytail: settings modal logic
@@ -731,61 +749,8 @@ function initializeDashboard(graphData) {
     const settingZoom = document.getElementById('setting-zoom');
     const settingDisableTours = document.getElementById('setting-disable-tours');
     const settingColorByType = document.getElementById('setting-color-by-type'); // ponytail
-    const btnCheckUpdates = document.getElementById('btn-check-updates');
-    if (btnCheckUpdates) {
-        btnCheckUpdates.addEventListener('click', async () => {
-            if (window.updatePending) {
-                if (confirm("Refresh now to apply the update?")) {
-                    updateSW(true);
-                }
-                return;
-            }
-            
-            btnCheckUpdates.innerText = 'Checking...';
-            try {
-                // 1. Standard PWA update
-                const reg = await navigator.serviceWorker.getRegistration();
-                if (reg) await reg.update();
-                
-                // ponytail: native cache-busting fallback for stuck edge caches
-                const res = await fetch('/?t=' + Date.now(), { cache: 'no-store' });
-                const html = await res.text();
-                const scriptEl = document.querySelector('script[type="module"][src]');
-                const currentSrc = scriptEl ? scriptEl.getAttribute('src') : null;
-                
-                if (currentSrc && currentSrc.includes('assets/') && !html.includes(currentSrc)) {
-                    if (confirm("A new version is available! Refresh now to apply the update?")) {
-                        if (reg) await reg.unregister();
-                        window.location.reload();
-                    }
-                    return;
-                }
 
-                setTimeout(() => {
-                    if (!window.updatePending) {
-                        btnCheckUpdates.innerText = 'Up to date!';
-                        setTimeout(() => { 
-                            if (!window.updatePending) {
-                                btnCheckUpdates.innerText = 'Search';
-                                btnCheckUpdates.style.background = '#3f51b5';
-                            }
-                        }, 4000);
-                    }
-                }, 2000);
-            } catch(e) {
-                btnCheckUpdates.innerText = 'Error';
-                setTimeout(() => { 
-                    if (!window.updatePending) {
-                        btnCheckUpdates.innerText = 'Search'; 
-                        btnCheckUpdates.style.background = '#3f51b5';
-                    }
-                }, 4000);
-            }
-        });
-    }
 
-    const btnResetTours = document.getElementById('btn-reset-tours');
-    
     const settingD3Spread = document.getElementById('setting-d3-spread');
     const btnResetSpread = document.getElementById('btn-reset-spread');
     
@@ -796,17 +761,17 @@ function initializeDashboard(graphData) {
             localStorage.setItem('d3_spread', val);
             if (window.d3Simulation) {
                 window.d3Simulation.force("charge").strength(parseInt(val));
-                window.d3Simulation.alpha(1).restart();
+                window.d3Simulation.alpha(0.3).restart();
             }
         });
     }
 
     if (btnResetSpread && settingD3Spread) {
         btnResetSpread.addEventListener('click', () => {
-            settingD3Spread.value = '-300';
-            localStorage.setItem('d3_spread', '-300');
+            settingD3Spread.value = '-1000';
+            localStorage.setItem('d3_spread', '-1000');
             if (window.d3Simulation) {
-                window.d3Simulation.force("charge").strength(-300);
+                window.d3Simulation.force("charge").strength(-1000);
                 window.d3Simulation.alpha(1).restart();
             }
         });
@@ -814,52 +779,28 @@ function initializeDashboard(graphData) {
 
     if (btnSettings && settingsModal) {
         btnSettings.addEventListener('click', async () => {
-            settingZoom.value = localStorage.getItem('offline_zoom_level') || '10';
             settingDisableTours.checked = localStorage.getItem('disable_tours') === 'true';
-            if (settingColorByType) settingColorByType.checked = localStorage.getItem('color_by_type') === 'true'; // ponytail
-            if (settingD3Spread) settingD3Spread.value = localStorage.getItem('d3_spread') || '-300';
+            if (settingD3Spread) settingD3Spread.value = localStorage.getItem('d3_spread') || '-1000';
             settingsModal.showModal();
-            // ponytail: true cache size
             try {
-                const cache = await caches.open('leaflet-tiles-cache');
+                const cache = await caches.open('meshlog-active-tiles');
                 const keys = await cache.keys();
-                const pStats = document.getElementById('cache-stats');
-                if (pStats) pStats.innerText = `${keys.length} tiles in cache`;
             } catch(e) {}
         });
 
-        btnResetTours.addEventListener('click', () => {
-            localStorage.removeItem('tour_global_seen');
-            localStorage.removeItem('tour_map_seen');
-            localStorage.removeItem('tour_net_seen');
-            localStorage.removeItem('tour_unmapped_seen');
-            alert("Tutorial progress reset! The guided tours will show again.");
-        });
-
         btnSettingsClose.addEventListener('click', () => {
-            const oldZ = localStorage.getItem('offline_zoom_level') || '10';
-            localStorage.setItem('offline_zoom_level', settingZoom.value);
             localStorage.setItem('disable_tours', settingDisableTours.checked ? 'true' : 'false');
-            if (settingColorByType) localStorage.setItem('color_by_type', settingColorByType.checked ? 'true' : 'false'); // ponytail
             if (settingD3Spread) localStorage.setItem('d3_spread', settingD3Spread.value);
             
-            // ponytail: persist settings to native Preferences
             Preferences.set({
                 key: 'app_settings',
                 value: JSON.stringify({
-                    offline_zoom_level: settingZoom.value,
                     disable_tours: settingDisableTours.checked ? 'true' : 'false',
-                    color_by_type: settingColorByType && settingColorByType.checked ? 'true' : 'false',
                     d3_spread: settingD3Spread ? settingD3Spread.value : null
                 })
             });
 
             settingsModal.close();
-            
-            // ponytail: if zoom level changed, trigger background fetch of the current viewport
-            if (settingZoom.value !== oldZ) {
-                downloadTiles(parseInt(settingZoom.value));
-            }
         });
 
         async function downloadTiles(maxZoom) {
@@ -944,7 +885,7 @@ function initializeDashboard(graphData) {
     const savedZoom = localStorage.getItem('map_zoom');
     const center = (savedLat && savedLng) ? [parseFloat(savedLat), parseFloat(savedLng)] : [0, 0];
     const zoom = savedZoom ? parseInt(savedZoom, 10) : 2;
-    const map = L.map('map', { layers: [defaultLayer] }).setView(center, zoom);
+    const map = L.map('map', { layers: [defaultLayer], zoomControl: false }).setView(center, zoom);
     
     map.on('moveend', () => {
         const c = map.getCenter();
@@ -986,31 +927,66 @@ function initializeDashboard(graphData) {
         setTimeout(() => map.invalidateSize(), 800);
     }
 
-    const markers = {};
-    const latLngs = [];
+    let nodeTelemetryChart = null;
 
-    function renderPlotly(popupId, telemetry) {
+    function renderChartJS(telemetry) {
+        const ctx = document.getElementById('telemetry-chart');
+        if (!ctx) return;
+        
+        if (nodeTelemetryChart) {
+            nodeTelemetryChart.destroy();
+        }
+
         if (!telemetry || telemetry.length === 0) return;
-        const labels = telemetry.map(t => new Date(t.time * 1000));
+
+        const labels = telemetry.map(t => new Date(t.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         const battData = telemetry.map(t => t.battery_level);
         const utilData = telemetry.map(t => t.channel_utilization);
 
-        const traceBatt = { x: labels, y: battData, mode: 'lines+markers', name: 'Battery %', line: { color: '#4caf50', width: 2 }, marker: { size: 4 } };
-        const traceUtil = { x: labels, y: utilData, mode: 'lines+markers', name: 'Ch Util %', line: { color: '#ff9800', width: 2 }, marker: { size: 4 } };
-
-        const layout = {
-            paper_bgcolor: 'transparent',
-            plot_bgcolor: 'transparent',
-            font: { color: '#ccc', size: 10 },
-            margin: { l: 30, r: 10, t: 10, b: 30 },
-            xaxis: { showgrid: false, type: 'date' },
-            yaxis: { showgrid: true, gridcolor: '#444', zeroline: false },
-            legend: { orientation: 'h', y: -0.2, x: 0 },
-            autosize: true
-        };
-
-        Plotly.newPlot(popupId, [traceBatt, traceUtil], layout, { displayModeBar: false, responsive: true });
+        nodeTelemetryChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Battery %',
+                        data: battData,
+                        borderColor: '#4caf50',
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 5
+                    },
+                    {
+                        label: 'Ch Util %',
+                        data: utilData,
+                        borderColor: '#ff9800',
+                        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { labels: { color: '#ccc', boxWidth: 12 } }
+                },
+                scales: {
+                    x: { ticks: { color: '#888', maxTicksLimit: 6 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+                }
+            }
+        });
     }
+
+    const markers = {};
+    const latLngs = [];
 
     function openNodePanel(nodeId) {
         const node = graphData.nodes.find(n => n.id === nodeId);
@@ -1028,13 +1004,35 @@ function initializeDashboard(graphData) {
 
         document.getElementById('panel-node-name').innerText = node.long_name || node.short_name || node.id;
         document.getElementById('panel-node-id').innerText = node.id;
-        document.getElementById('panel-hw-model').innerText = node.hw_model || '-';
+        const tType = node.is_gateway ? 'GW' : (node.transport_type || (node.via_mqtt ? 'MQTT' : 'RF'));
+        const badgeText = tType === 'GW' ? ' (GW 🌐)' : (tType === 'HYBRID' ? ' (RF + MQTT 🌐📻)' : (tType === 'MQTT' ? ' (MQTT 🌐)' : ' (RF 📻)'));
+        document.getElementById('panel-hw-model').innerText = (node.hw_model || '-') + badgeText;
         document.getElementById('panel-traffic').innerText = node.traffic_volume || 0;
 
-        // Render Plotly chart
-        document.getElementById('panel-chart').innerHTML = '';
+        const statusBadge = document.getElementById('panel-node-status');
         if (node.telemetry && node.telemetry.length > 0) {
-            renderPlotly('panel-chart', node.telemetry);
+            const lastSeen = node.telemetry[node.telemetry.length - 1].time;
+            const now = Date.now() / 1000;
+            if (now - lastSeen < 3600) { 
+                statusBadge.className = 'badge bg-success';
+                statusBadge.innerText = 'Online';
+            } else {
+                statusBadge.className = 'badge bg-secondary';
+                statusBadge.innerText = 'Offline';
+            }
+        } else {
+            statusBadge.className = 'badge bg-secondary';
+            statusBadge.innerText = 'Unknown';
+        }
+
+        // Render Chart.js
+        if (node.telemetry && node.telemetry.length > 0) {
+            renderChartJS(node.telemetry);
+        } else {
+            if (nodeTelemetryChart) {
+                nodeTelemetryChart.destroy();
+                nodeTelemetryChart = null;
+            }
         }
 
         // Show recent packets
@@ -1132,16 +1130,85 @@ function initializeDashboard(graphData) {
         setTimeout(() => { if (map) map.invalidateSize(); }, 300);
     };
 
+    const markerCluster = L.markerClusterGroup();
+    window.precisionCircles = {};
+    
+    // Draw Malla-style link health lines (dashed) on Leaflet Map
+    if (window.geoEdgesLayerGroup) {
+        map.removeLayer(window.geoEdgesLayerGroup);
+    }
+    window.geoEdgesLayerGroup = L.layerGroup().addTo(map);
+
+    const getLinkColor = (snr) => {
+        if (snr === null || snr === undefined) return "#00bcd4";
+        if (snr > -5) return "#4caf50";
+        if (snr > -15) return "#ffc107";
+        return "#f44336";
+    };
+
+    if (graphData.edges && Array.isArray(graphData.edges)) {
+        const nodeMap = new Map(graphData.nodes.map(n => [n.id, n]));
+        graphData.edges.forEach(edge => {
+            const src = nodeMap.get(edge.source);
+            const tgt = nodeMap.get(edge.target);
+            if (src && tgt && src.lat !== undefined && src.lon !== undefined && tgt.lat !== undefined && tgt.lon !== undefined) {
+                L.polyline([[src.lat, src.lon], [tgt.lat, tgt.lon]], {
+                    color: getLinkColor(edge.snr),
+                    weight: 2,
+                    opacity: 0.6,
+                    dashArray: '5, 10'
+                }).addTo(window.geoEdgesLayerGroup);
+            }
+        });
+    }
+
     graphData.nodes.forEach(node => {
         if (node.lat !== undefined && node.lon !== undefined) {
+            const shortText = node.short_name ? node.short_name.substring(0, 4) : node.id.substring(node.id.length - 4);
             const isSrc = node.id === maxVolNodeId;
-            const markerOptions = isSrc ? { icon: new L.Icon({ iconUrl: '/lib/leaflet/images/marker-icon-red.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34] }) } : {};
-            const marker = L.marker([node.lat, node.lon], markerOptions).addTo(map);
+            const role = (node.role || '').toUpperCase();
+
+            let roleClass = node.is_gateway ? 'marker-role-gateway' : 'marker-role-client';
+            if (!node.is_gateway) {
+                if (role === 'ROUTER' || role === 'REPEATER') roleClass = 'marker-role-router';
+                else if (role === 'ROUTER_LATE') roleClass = 'marker-role-router-late';
+                else if (role === 'CLIENT_BASE') roleClass = 'marker-role-client-base';
+                else if (role === 'CLIENT_MUTE') roleClass = 'marker-role-client-mute';
+            }
+            
+            let bgStyle = isSrc ? 'background-color: #e91e63 !important;' : '';
+
+            const markerOptions = {
+                icon: L.divIcon({
+                    html: `<div class="${roleClass}" style="${bgStyle}"><span>${escapeHTML(shortText)}</span></div>`,
+                    className: 'marker-cluster marker-cluster-medium',
+                    iconSize: L.point(44, 44)
+                })
+            };
+            const marker = L.marker([node.lat, node.lon], markerOptions).addTo(markerCluster);
             markers[node.id] = marker;
             latLngs.push([node.lat, node.lon]);
 
+            // Ponytail: Dynamic precision circle based on PDOP
+            const rad = node.pdop ? Math.max(10, node.pdop / 10) : 50;
+            const pCircle = L.circle([node.lat, node.lon], { radius: rad, color: '#3ec57e', fillOpacity: 0.1, weight: 1, interactive: false }).addTo(map);
+            window.precisionCircles[node.id] = pCircle;
+
             let html = `<div class="popup-header">${escapeHTML(node.long_name || node.id)}</div>`;
-            if (node.hw_model) html += `<div>Model: ${escapeHTML(node.hw_model)}</div>`;
+            const tType = node.is_gateway ? 'GW' : (node.transport_type || (node.via_mqtt ? 'MQTT' : 'RF'));
+            const transportBadge = tType === 'GW'
+                ? `<span class="transport-badge transport-badge-gw">GW 🌐</span>`
+                : (tType === 'HYBRID'
+                    ? `<span class="transport-badge transport-badge-hybrid">RF + MQTT 🌐📻</span>`
+                    : (tType === 'MQTT'
+                        ? `<span class="transport-badge transport-badge-mqtt">MQTT 🌐</span>`
+                        : `<span class="transport-badge transport-badge-rf">RF 📻</span>`));
+            if (node.hw_model) html += `<div>Model: ${escapeHTML(node.hw_model)} ${transportBadge}</div>`;
+            else html += `<div>Transport: ${transportBadge}</div>`;
+            if (node.role) html += `<div style="color:#ffd700;font-weight:bold;font-size:11px;">Role: ${escapeHTML(node.role)}</div>`;
+            if (node.sats_in_view) html += `<div style="color:#aaa;font-size:11px;">Sats in view: ${node.sats_in_view}</div>`;
+            const latestTelem = node.telemetry && node.telemetry.length ? node.telemetry[node.telemetry.length - 1] : null;
+            if (latestTelem && latestTelem.uptime_seconds) html += `<div style="color:#aaa;font-size:11px;">Uptime: ${Math.floor(latestTelem.uptime_seconds / 3600)}h ${Math.floor((latestTelem.uptime_seconds % 3600) / 60)}m</div>`;
             html += `<div>Traffic Volume: ${node.traffic_volume} pkts</div>`;
             html += `<div style="margin-top:10px;color:#00bcd4;cursor:pointer;font-weight:bold;font-size:12px;" onclick="document.dispatchEvent(new CustomEvent('openNodePanel', {detail: '${node.id}'}))">VIEW ANALYTICS &rarr;</div>`;
             html += `<div style="margin-top:8px;color:#7c3aed;cursor:pointer;font-weight:bold;font-size:12px;" onclick="document.dispatchEvent(new CustomEvent('copyNodeLink', {detail: '${node.id}'}))">SHARE NODE 🔗</div>`;
@@ -1149,6 +1216,7 @@ function initializeDashboard(graphData) {
             marker.bindPopup(html);
         }
     });
+    map.addLayer(markerCluster);
 
     window.openNodePanelFn = openNodePanel;
     if (!window._dashboardEventsAttached) {
@@ -1179,13 +1247,6 @@ function initializeDashboard(graphData) {
     }
 
     const routeLines = [];
-    
-    const getLinkColor = (snr) => {
-        if (snr === null || snr === undefined) return "#00bcd4";
-        if (snr > -5) return "#4caf50";
-        if (snr > -15) return "#ffc107";
-        return "#f44336";
-    };
 
     const getThickness = (snr) => {
         if (snr === null || snr === undefined) return 2;
@@ -1258,28 +1319,61 @@ function initializeDashboard(graphData) {
         requestAnimationFrame(step);
     }
 
-    // --- SIDEBAR ---
-    const unmappedList = document.getElementById('unmapped-list');
-    graphData.unmapped.forEach(id => {
-        const node = graphData.nodes.find(n => n.id === id);
-        if (!node || node.telemetry.length === 0) return;
+    // --- SIDEBAR LONGEST LINKS ---
+    function getSNRBadgeClass(snr) {
+        if (snr === null || snr === undefined) return 'bg-secondary';
+        if (snr >= 5) return 'bg-success';
+        if (snr >= 0) return 'bg-warning';
+        if (snr >= -10) return 'bg-warning text-dark';
+        return 'bg-danger';
+    }
 
-        const div = document.createElement('div');
-        div.className = 'node-card';
-        div.style.cursor = 'pointer';
-        div.onclick = () => openNodePanel(node.id);
-        div.innerHTML = `<div class="node-name">${escapeHTML(node.long_name || id)}</div>`;
+    const tbody = document.getElementById('longest-links-table-body');
+    const countEl = document.getElementById('longest-links-count');
+    const totalEl = document.getElementById('total-rf-links');
+    const longestEl = document.getElementById('longest-direct-link');
 
-        let details = `<div>Volume: ${node.traffic_volume} pkts</div>`;
-        if (node.hw_model) details += `<div>${escapeHTML(node.hw_model)}</div>`;
+    if (tbody && graphData.longestLinks) {
+        tbody.innerHTML = '';
+        if (countEl) countEl.textContent = graphData.longestLinks.length;
+        if (totalEl) totalEl.textContent = graphData.longestLinks.length;
+        
+        if (graphData.longestLinks.length > 0 && longestEl) {
+            longestEl.textContent = graphData.longestLinks[0].distanceKm.toFixed(2) + ' km';
+        }
 
-        const latest = node.telemetry[node.telemetry.length - 1];
-        if (latest.battery_level !== undefined) details += `<div>Batt: ${latest.battery_level}%</div>`;
-        if (latest.channel_utilization !== undefined) details += `<div>Ch Util: ${latest.channel_utilization.toFixed(1)}%</div>`;
-
-        div.innerHTML += `<div class="node-detail">${details}</div>`;
-        unmappedList.appendChild(div);
-    });
+        graphData.longestLinks.forEach((link, idx) => {
+            const tr = document.createElement('tr');
+            
+            const snrClass = getSNRBadgeClass(link.snr);
+            const snrText = link.snr !== null ? link.snr.toFixed(1) + ' dB' : 'N/A';
+            
+            tr.innerHTML = `
+                <td><strong>${idx + 1}</strong></td>
+                <td>
+                    <a href="#" class="node-link" onclick="openNodePanel('${link.source}'); return false;">${escapeHTML(link.sourceName)}</a>
+                    <br><span style="color:#666;font-size:10px;">➔</span><br>
+                    <a href="#" class="node-link" onclick="openNodePanel('${link.target}'); return false;">${escapeHTML(link.targetName)}</a>
+                </td>
+                <td style="color: ${link.distanceKm >= 10 ? '#ffc107' : '#ececec'}; font-weight: ${link.distanceKm >= 10 ? 'bold' : 'normal'};">
+                    ${link.distanceKm.toFixed(2)} km
+                </td>
+                <td><span class="badge ${snrClass}">${snrText}</span></td>
+            `;
+            
+            tr.style.cursor = 'pointer';
+            tr.onclick = (e) => {
+                if (e.target.tagName === 'A') return; 
+                if (markers[link.source] && markers[link.target]) {
+                    const group = new L.featureGroup([markers[link.source], markers[link.target]]);
+                    map.fitBounds(group.getBounds().pad(0.1));
+                    btnMap.click(); // Switch back to map view
+                }
+            };
+            
+            tbody.appendChild(tr);
+        });
+    }
 
 
     // --- D3 FORCE DIRECTED GRAPH ---
@@ -1331,7 +1425,7 @@ function initializeDashboard(graphData) {
 
         const simulation = d3.forceSimulation(d3Nodes)
             .force("link", d3.forceLink(d3Links).id(d => d.id).distance(80))
-            .force("charge", d3.forceManyBody().strength(parseInt(localStorage.getItem('d3_spread') || '-300')))
+            .force("charge", d3.forceManyBody().strength(parseInt(localStorage.getItem('d3_spread') || '-1000')))
             .force("center", d3.forceCenter(width / 2, height / 2))
             .force("collide", d3.forceCollide().radius(d => (d.short_name === 'NXTW' ? 20 : 10) + 15));
 
@@ -1348,14 +1442,26 @@ function initializeDashboard(graphData) {
         // highlightD3Route moved down to access node and labels
 
         const node = g.append("g")
-            .attr("stroke", "#fff")
-            .attr("stroke-width", 1.5)
             .selectAll("circle")
             .data(d3Nodes)
             .join("circle")
             .attr("id", d => 'd3-node-' + d.id.replace(/[^a-zA-Z0-9]/g, ''))
             .attr("r", d => d.short_name === 'NXTW' ? 20 : 10)
-            .attr("fill", d => d.id === maxVolNodeId ? "red" : "#2196f3")
+            .attr("fill", d => d.id === maxVolNodeId ? "#e91e63" : (d.role === 'CLIENT_BASE' ? '#00bcd4' : '#2196f3'))
+            .attr("stroke", d => {
+                if (d.is_gateway) return '#ab47bc';
+                const r = (d.role || '').toUpperCase();
+                if (r === 'ROUTER' || r === 'REPEATER') return '#ffd700';
+                if (r === 'ROUTER_LATE') return '#ff9800';
+                if (r === 'CLIENT_BASE') return '#00bcd4';
+                return '#ffffff';
+            })
+            .attr("stroke-width", d => {
+                if (d.is_gateway) return 3;
+                const r = (d.role || '').toUpperCase();
+                return (r.includes('ROUTER') || r === 'CLIENT_BASE') ? 3 : 1.5;
+            })
+            .attr("stroke-dasharray", d => (d.role || '').toUpperCase() === 'CLIENT_MUTE' ? "3,3" : null)
             .call(drag(simulation))
             .on("mouseover", (event, d) => {
                 tooltip.style("opacity", 1)
@@ -1514,17 +1620,7 @@ function initializeDashboard(graphData) {
     const speedControl = document.getElementById('speed-control');
     let pktIdx = 0;
 
-    function getPacketColor(pkt) {
-        const colorByType = localStorage.getItem('color_by_type') === 'true';
-        const pktSig = colorByType ? (pkt.port || 'UNKNOWN') : ((pkt.sum || '') + (pkt.port || '') + (pkt.from || '') + (pkt.to || ''));
-        let hash = 0;
-        for (let i = 0; i < pktSig.length; i++) {
-            hash = pktSig.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        return `hsl(${Math.abs(hash) % 360}, 100%, 65%)`;
-    }
-
-    function pulseLeaflet(id, color = '#ffeb3b') {
+    function pulseLeaflet(id, color = '#00bcd4') {
         if (!id) return;
         const m = markers[id];
         if (m) {
@@ -1547,7 +1643,7 @@ function initializeDashboard(graphData) {
         }
     }
 
-    function pulseD3(id, color = '#ffeb3b') {
+    function pulseD3(id, color = '#00bcd4') {
         if (!window.d3Initialized || !id) return;
         const safeId = String(id).replace(/[^a-zA-Z0-9]/g, '');
         const circle = d3.select('#d3-node-' + safeId);
@@ -1565,8 +1661,24 @@ function initializeDashboard(graphData) {
         }
     }
 
-    let currentSimTime = graphData.packetLog && graphData.packetLog.length > 0 ? graphData.packetLog[0].time : Date.parse("2026-06-18T13:27:58Z");
+    let currentSimTime = graphData.packetLog && graphData.packetLog.length > 0 ? (graphData.packetLog[0].time || Date.parse("2026-06-18T13:27:58Z")) : Date.parse("2026-06-18T13:27:58Z");
     let lastRealTime = performance.now();
+
+    const validTimes = (graphData.packetLog || []).map(p => p.time).filter(t => t && t > 0);
+    const minSimTime = validTimes.length > 0 ? Math.min(...validTimes) : currentSimTime;
+    const maxSimTime = validTimes.length > 0 ? Math.max(...validTimes) : currentSimTime + 60000;
+
+    function formatTimeClock(ms) {
+        if (!ms || isNaN(ms)) return "00:00:00";
+        const date = new Date(ms);
+        return date.toTimeString().split(' ')[0];
+    }
+
+    const curTimeEl = document.getElementById('sim-time-current');
+    const totTimeEl = document.getElementById('sim-time-total');
+
+    if (totTimeEl) totTimeEl.innerText = formatTimeClock(maxSimTime);
+    if (curTimeEl) curTimeEl.innerText = formatTimeClock(currentSimTime);
 
     function tick() {
         const now = performance.now();
@@ -1581,16 +1693,71 @@ function initializeDashboard(graphData) {
         const speedMult = parseFloat(speedControl.value) || 1;
         currentSimTime += deltaReal * speedMult;
 
+        if (curTimeEl) curTimeEl.innerText = formatTimeClock(currentSimTime);
+
         // Fast-forward dead air: max 1000ms simulated wait between packets
         if (pktIdx < graphData.packetLog.length) {
             const nextTime = graphData.packetLog[pktIdx].time;
-            if (nextTime - currentSimTime > 1000) {
+            if (nextTime && nextTime - currentSimTime > 1000) {
                 currentSimTime = nextTime - 1000;
             }
         }
 
         const nodeFilterText = document.getElementById('node-filter') ? document.getElementById('node-filter').value.trim().toLowerCase() : '';
         const portFilterVal = document.getElementById('port-filter') ? document.getElementById('port-filter').value.toUpperCase() : '';
+
+        // Ponytail Map Filters
+        const maxAgeHrs = document.getElementById('age-filter') ? parseFloat(document.getElementById('age-filter').value) : NaN;
+        const maxHops = document.getElementById('hop-filter') ? parseInt(document.getElementById('hop-filter').value) : NaN;
+
+        let allowedHops = null;
+        if (!isNaN(maxHops) && window.lastClickedNodeId) {
+            allowedHops = new Set();
+            const adj = {};
+            graphData.edges.forEach(e => {
+                const s = e.source.id || e.source; const t = e.target.id || e.target;
+                if(!adj[s]) adj[s] = []; if(!adj[t]) adj[t] = [];
+                adj[s].push(t); adj[t].push(s);
+            });
+            const q = [[window.lastClickedNodeId, 0]];
+            const visited = new Set([window.lastClickedNodeId]);
+            while(q.length > 0) {
+                const [curr, depth] = q.shift();
+                allowedHops.add(curr);
+                if (depth < maxHops) {
+                    for(const n of (adj[curr] || [])) {
+                        if(!visited.has(n)) { visited.add(n); q.push([n, depth + 1]); }
+                    }
+                }
+            }
+        }
+
+        graphData.nodes.forEach(n => {
+            let visible = true;
+            if (!isNaN(maxAgeHrs) && n.telemetry && n.telemetry.length > 0) {
+                let latestAgeMs = Infinity;
+                for (let i = n.telemetry.length - 1; i >= 0; i--) {
+                    if (n.telemetry[i].time <= currentSimTime) {
+                        latestAgeMs = currentSimTime - n.telemetry[i].time;
+                        break;
+                    }
+                }
+                if (latestAgeMs > maxAgeHrs * 3600000) visible = false;
+            }
+            if (allowedHops && !allowedHops.has(n.id)) visible = false;
+
+            if (markers[n.id]) {
+                const isVis = visible ? 1 : 0;
+                if (markers[n.id].options.opacity !== isVis) {
+                    markers[n.id].setOpacity(isVis);
+                    if (window.precisionCircles && window.precisionCircles[n.id]) {
+                        window.precisionCircles[n.id].setStyle({ opacity: visible ? 0.1 : 0, fillOpacity: visible ? 0.1 : 0 });
+                    }
+                }
+            }
+            const el = document.getElementById('d3-node-' + n.id.replace(/[^a-zA-Z0-9]/g, ''));
+            if (el) el.style.display = visible ? 'block' : 'none';
+        });
 
         let renderedThisFrame = 0;
         while (pktIdx < graphData.packetLog.length && graphData.packetLog[pktIdx].time <= currentSimTime && renderedThisFrame < 50) {
@@ -1616,11 +1783,10 @@ function initializeDashboard(graphData) {
 
                 if (!skip) {
                     renderPacket(p);
-                    const pColor = getPacketColor(p);
                     if (p.port === 'POSITION_APP') {
-                        if (p.from) pulseLeaflet(p.from, pColor);
+                        if (p.from) pulseLeaflet(p.from, '#4caf50');
                     } else {
-                        if (p.from) pulseD3(p.from, pColor);
+                        if (p.from) pulseD3(p.from, '#00bcd4');
                     }
                     renderedThisFrame++;
                 }
@@ -1645,19 +1811,16 @@ function initializeDashboard(graphData) {
         const d = new Date(pkt.time);
         const timeStr = `[${d.toTimeString().substring(0, 8)}.${d.getMilliseconds().toString().padStart(3, '0')}]`;
         
-        const pktColor = getPacketColor(pkt);
+        const dotColor = pkt.port === 'POSITION_APP' ? '#4caf50' : (pkt.port === 'TELEMETRY_APP' ? '#ff9800' : '#00bcd4');
 
         const div = document.createElement('div');
         div.className = 'term-line';
         
-        // ponytail: inject dynamic colors for the :last-child highlight
-        div.style.setProperty('--term-border', pktColor);
-        div.style.setProperty('--term-bg', pktColor.replace('hsl', 'hsla').replace(')', ', 0.15)'));
         div.dataset.port = (pkt.port || '').toUpperCase();
         div.dataset.from = (pkt.from || '').toLowerCase();
         div.dataset.to = (pkt.to || '').toLowerCase();
         div.dataset.sum = (pkt.sum || '').toLowerCase();
-        div.innerHTML = `<span style="color:${pktColor}; margin-right:6px; font-size:14px;">●</span><span style="color: #888; margin-right: 8px;">${timeStr}</span><span class="term-port">[${escapeHTML(pkt.port)}]</span><span class="term-from">FROM: ${escapeHTML(displayName)}</span><span class="term-sum">${escapeHTML(pkt.sum)}</span>`;
+        div.innerHTML = `<span style="color:${dotColor}; margin-right:6px; font-size:12px;">●</span><span style="color: #888; margin-right: 8px; font-family: monospace;">${timeStr}</span><span class="term-port">[${escapeHTML(pkt.port)}]</span><span class="term-from">FROM: ${escapeHTML(displayName)}</span><span class="term-sum">${escapeHTML(pkt.sum)}</span>`;
 
         div.onclick = () => {
             document.getElementById('dpi-modal').style.display = 'flex';
@@ -1671,8 +1834,8 @@ function initializeDashboard(graphData) {
         }
         termOut.scrollTop = termOut.scrollHeight;
 
-        pulseLeaflet(pkt.from, pktColor);
-        pulseD3(pkt.from, pktColor);
+        pulseLeaflet(pkt.from, dotColor);
+        pulseD3(pkt.from, dotColor);
 
         if (pkt.hops && pkt.hops.length > 1) {
             const points = [];
@@ -1937,24 +2100,25 @@ function initializeDashboard(graphData) {
         ]);
     };
 
-    window.runUnmappedTour = function () {
-        createTour('tour_unmapped_seen', [
-            { element: '#btn-sidebar', popover: { title: 'Unmapped Nodes', description: 'List of active nodes on the network that haven\'t acquired a GPS fix yet, along with the Network Legend.', side: "bottom", align: 'start' } }
-        ]);
-    };
-
     function initTutorial() {
-        document.getElementById('btn-tutorial').onclick = () => {
-            localStorage.removeItem('tour_global_seen');
-            localStorage.removeItem('tour_map_seen');
-            localStorage.removeItem('tour_net_seen');
-            localStorage.removeItem('tour_unmapped_seen');
-            runGlobalTour();
-        };
+        const btnT = document.getElementById('btn-modal-tutorial') || document.getElementById('btn-tutorial');
+        if (btnT) {
+            btnT.onclick = () => {
+                const modal = document.getElementById('settings-modal');
+                if (modal && modal.close) modal.close();
+                localStorage.removeItem('tour_global_seen');
+                localStorage.removeItem('tour_map_seen');
+                localStorage.removeItem('tour_net_seen');
+                localStorage.removeItem('tour_unmapped_seen');
+                runGlobalTour();
+            };
+        }
 
         if (!localStorage.getItem('tour_global_seen')) {
             setTimeout(() => runGlobalTour(), 500);
         }
     }
+
+
 
 } // End initializeDashboard

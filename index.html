@@ -12,7 +12,7 @@ Required Notice: Copyright (c) 2026 CardoSystems
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Meshlog</title>
-    
+
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png">
@@ -36,14 +36,17 @@ Required Notice: Copyright (c) 2026 CardoSystems
     <link rel="stylesheet" href="/encom-styles.css" />
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="/lib/leaflet/leaflet.css" />
-    <!-- Plotly JS -->
-    <script src="/lib/plotly.min.js" defer></script>
+    <!-- Chart.js -->
+    <script src="/lib/chart.min.js"></script>
     <!-- D3 JS -->
     <script src="/lib/d3.min.js" defer></script>
 
 
     <!-- Leaflet JS -->
     <script src="/lib/leaflet/leaflet.js" defer></script>
+    <script src="/lib/leaflet.markercluster.js" defer></script>
+    <link rel="stylesheet" href="/lib/MarkerCluster.css" />
+    <link rel="stylesheet" href="/lib/MarkerCluster.Default.css" />
 
     <!-- Cloudflare Turnstile -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -59,7 +62,8 @@ Required Notice: Copyright (c) 2026 CardoSystems
 </head>
 
 <body>
-    <div id="offline-banner" style="display:none; position:fixed; top:90px; left:15px; text-align:center; z-index:9999;">
+    <div id="offline-banner"
+        style="display:none; position:fixed; top:90px; left:15px; text-align:center; z-index:9999;">
         <div style="font-size:24px; filter: hue-rotate(0deg); line-height: 1;">🚨</div>
         <div style="color:red; font-size:10px; font-weight:bold; margin-top:2px;">OFFLINE</div>
     </div>
@@ -76,7 +80,7 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <div id="options">
                 <div id="options-content">
                     <h3>Add element by clicking map below</h3>
-                    <img class="projection" src="resources/point_picker.png" width="280px" />
+                    <img class="projection" src="/resources/point_picker.png" width="280px" />
                     <ul id="add-element">
                         <li id="add-pin" class="button selected">Drop Pin</li>
                         <li id="add-marker" class="button">Marker</li>
@@ -169,7 +173,7 @@ Required Notice: Copyright (c) 2026 CardoSystems
                 <div class="header-right-section">SYS | O12</div>
             </div>
             <div id="thumbprint">
-                <img src="resources/thumbprint.png" />
+                <img src="/resources/thumbprint.png" />
             </div>
             <!-- probably should remove these and have them created in the script-->
             <div class="header-animator" id="header-animator-inside"></div>
@@ -180,26 +184,11 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <div
                 style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #fff; text-shadow: 0 0 10px #fff;">
                 MESHTASTIC LOG MAPPER</div>
-            <p style="color: #aaa; text-align: center; font-size: 14px;">Select a raw .txt debug log file to parse
-                offline, or load the demo.</p>
-            <div style="display: flex; gap: 10px; align-items: center;">
+            <p style="color: #aaa; text-align: center; font-size: 14px; margin: 0;">Select a raw .txt debug log file to parse offline.</p>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center;">
                 <input type="file" id="log-file-input" accept=".txt"
-                    style="background: #333; color: white; padding: 10px; border-radius: 5px; border: 1px solid #555; cursor: pointer; outline: none;">
-                <button id="btn-load-demo"
-                    style="display:none; background: #00bcd4; color: #000; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">Load
-                    Demo Dataset</button>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <a href="javascript:void(0)" onclick="window.loadMap('30aexpfu')"
-                    style="flex: 1; text-align: center; background: rgba(33, 150, 243, 0.1); border: 1px solid rgba(33, 150, 243, 0.5); padding: 10px; border-radius: 8px; color: #2196F3; text-decoration: none; font-weight: bold; transition: all 0.3s;"
-                    onmouseover="this.style.background='rgba(33, 150, 243, 0.2)'"
-                    onmouseout="this.style.background='rgba(33, 150, 243, 0.1)'">Load DEMO</a>
-                <a href="javascript:void(0)" onclick="window.loadMap('s67llxm3')"
-                    style="flex: 1; text-align: center; background: rgba(76, 175, 80, 0.1); border: 1px solid rgba(76, 175, 80, 0.5); padding: 10px; border-radius: 8px; color: #4caf50; text-decoration: none; font-weight: bold; transition: all 0.3s;"
-                    onmouseover="this.style.background='rgba(76, 175, 80, 0.2)'"
-                    onmouseout="this.style.background='rgba(76, 175, 80, 0.1)'">Load DEMO 2</a>
-                <button id="btn-install"
-                    style="display:none; flex: 1; text-align: center; background: rgba(255, 152, 0, 0.1); border: 1px solid rgba(255, 152, 0, 0.5); padding: 10px; border-radius: 8px; color: #ff9800; font-weight: bold; cursor: pointer;">Install App</button>
+                    style="background: #252830; color: white; padding: 10px 14px; border-radius: 8px; border: 1px solid #444; cursor: pointer; outline: none;">
+                <button id="btn-install" class="pwa-install-btn" style="display:none;">📲 Install Meshlog App</button>
             </div>
         </div>
         <div id="loading-spinner-container" style="display: flex; flex-direction: column; align-items: center;">
@@ -269,13 +258,9 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <datalist id="node-datalist"></datalist>
             <button id="btn-map" class="active">Geo Map</button>
             <button id="btn-net">Logical Network</button>
-            <button id="btn-sidebar">Unmapped Nodes</button>
+            <button id="btn-longest-links">Longest Links</button>
             <button id="btn-upload"
                 style="background: #2196F3; border-color: #2196F3; color: white; cursor: pointer;">Upload Log</button>
-            <button id="btn-tutorial"
-                style="background: #e91e63; border-color: #e91e63; color: white; cursor: pointer;">Tutorial</button>
-            <button id="btn-home" onclick="window.goHome()"
-                style="background: #9c27b0; border-color: #9c27b0; color: white; cursor: pointer;">HOME🌐</button>
             <button id="btn-settings"
                 style="background: #607d8b; border-color: #607d8b; color: white; cursor: pointer;">⚙️ Settings</button>
             <button id="btn-share"
@@ -285,75 +270,145 @@ Required Notice: Copyright (c) 2026 CardoSystems
         </div>
         <button id="nav-toggle" class="mobile-only">☰</button>
         <div id="views">
-            <div id="map"></div>
+            <div id="map">
+                <details class="geo-info-details">
+                    <summary class="geo-info-summary">ℹ️ MAP HELP</summary>
+                    <div class="geo-info-panel">
+                        <h4>Geo Map Guide</h4>
+                        <div class="geo-help-section">
+                            <strong>Node Marker Roles:</strong>
+                            <div class="legend-item"><div class="legend-shape legend-square legend-gold"></div> Router / Repeater (Gold Square)</div>
+                            <div class="legend-item"><div class="legend-shape legend-square legend-amber"></div> Router Late (Amber Square)</div>
+                            <div class="legend-item"><div class="legend-shape legend-circle legend-cyan"></div> Client Base (Cyan Ring)</div>
+                            <div class="legend-item"><div class="legend-shape legend-circle legend-dashed"></div> Client Mute (Dashed Circle)</div>
+                            <div class="legend-item"><div class="legend-shape legend-circle legend-green"></div> Standard Client (Circle)</div>
+                        </div>
+                        <div class="geo-help-section">
+                            <strong>Signal Quality (SNR):</strong>
+                            <div class="legend-item"><div class="legend-color" style="background: #4caf50;"></div> &gt; -5 dB (Excellent)</div>
+                            <div class="legend-item"><div class="legend-color" style="background: #ffc107;"></div> -15 to -5 dB (Fair)</div>
+                            <div class="legend-item"><div class="legend-color" style="background: #f44336;"></div> &le; -15 dB (Poor)</div>
+                        </div>
+                        <div class="geo-help-section">
+                            <strong>Transport Badges:</strong>
+                            <div><span class="transport-badge transport-badge-gw">GW 🌐</span> Explicit Internet Gateway</div>
+                            <div><span class="transport-badge transport-badge-rf">RF 📻</span> LoRa Radio Direct</div>
+                            <div><span class="transport-badge transport-badge-mqtt">MQTT 🌐</span> Internet Gateway</div>
+                            <div><span class="transport-badge transport-badge-hybrid">RF + MQTT 🌐📻</span> Dual / Hybrid Transport</div>
+                        </div>
+                        <div class="geo-help-section geo-help-tips">
+                            <strong>Controls:</strong>
+                            <p>• Click any node to open analytics, battery & telemetry history.</p>
+                            <p>• Filter nodes by ID, Hop count, or Age using bottom controls.</p>
+                        </div>
+                    </div>
+                </details>
+            </div>
             <div id="d3-container">
                 <div id="d3-tooltip"></div>
-                <details style="position: absolute; top: 15px; left: 15px; z-index: 1000; background: rgba(20,20,20,0.95); border: 1px solid #444; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.8); pointer-events: auto;">
-                    <summary style="padding: 8px 12px; cursor: pointer; color: #fff; font-weight: bold; font-size: 14px; list-style: none;">ℹ️ INFO</summary>
-                    <div class="legend" style="padding: 0 15px 15px 15px; margin-top: 0; border-top: none;">
-                        <h4 style="color: #fff; margin: 0 0 10px 0;">Network Graph Legend</h4>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #4caf50;"></div> SNR &gt; -5 (Excellent)
+                <details class="geo-info-details">
+                    <summary class="geo-info-summary">ℹ️ GRAPH HELP</summary>
+                    <div class="geo-info-panel">
+                        <h4>Network Graph Guide</h4>
+                        <div class="geo-help-section">
+                            <strong>Node Marker Shapes:</strong>
+                            <div class="legend-item"><div class="legend-shape d3-legend-gateway"></div> Gateway Node (Purple Border)</div>
+                            <div class="legend-item"><div class="legend-shape d3-legend-router"></div> Router Node (Gold Border)</div>
+                            <div class="legend-item"><div class="legend-shape d3-legend-router-late"></div> Router Late (Amber Border)</div>
+                            <div class="legend-item"><div class="legend-shape d3-legend-client-base"></div> Client Base (Cyan)</div>
+                            <div class="legend-item"><div class="legend-shape d3-legend-client-mute"></div> Client Mute (Dashed Border)</div>
+                            <div class="legend-item"><div class="legend-shape d3-legend-standard"></div> Standard Node (White Border)</div>
                         </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #ffc107;"></div> SNR &gt; -15 (Good/Fair)
+                        <div class="geo-help-section">
+                            <strong>Graph Elements:</strong>
+                            <p>• Node Size = Traffic Volume</p>
+                            <p>• Link Thickness = Signal Strength (SNR)</p>
+                            <p>• Drag nodes to reorganize network topology.</p>
                         </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #f44336;"></div> SNR &lt;= -15 (Poor)
-                        </div>
-                        <p style="margin-top: 10px; margin-bottom: 5px;">Node Size = Traffic Volume</p>
-                        <p style="margin: 0;">Link Thickness = Signal Strength (SNR)</p>
                     </div>
                 </details>
             </div>
             <div id="sidebar">
-                <h2>Unmapped Nodes</h2>
-                <p style="font-size: 13px; color: #aaa; margin-bottom: 20px;">Nodes with telemetry but no GPS data.</p>
-                <div id="unmapped-list"></div>
+                <div class="sidebar-header">
+                    <h2>Longest Links (RF)</h2>
+                    <span id="longest-links-count" class="badge badge-primary">0</span>
+                </div>
+
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <div class="card-metric" id="total-rf-links">-</div>
+                        <div class="card-label">Total RF Links</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="card-metric text-warning" id="longest-direct-link">-</div>
+                        <div class="card-label">Longest Direct</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="malla-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Nodes</th>
+                                <th>Distance</th>
+                                <th>SNR</th>
+                            </tr>
+                        </thead>
+                        <tbody id="longest-links-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <div id="terminal-container">
             <div id="terminal-header" style="position: relative;">
-                <div id="signature-block" style="position: absolute; left: 50%; transform: translateX(-50%); text-align: center; font-size: 11px; color: #888; display: flex; flex-direction: row; gap: 10px; align-items: center; white-space: nowrap; z-index: 0; pointer-events: none;">
-                    <button id="terminal-toggle-mobile" class="term-toggle" title="Toggle terminal" style="display:none; pointer-events:auto; background:#333; border:1px solid #555; color:#fff; font-size:16px; cursor:pointer; padding:2px 10px; border-radius:4px; line-height:1;">▾</button>
-                </div>
-                <div id="terminal-header-row1">
-                    <span id="terminal-title" style="z-index: 1;">>_ Packet Inspector</span>
-                </div>
-                <div id="term-header-controls" style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
-                    <input type="search" id="node-filter" list="node-datalist" placeholder="Search Node ID..."
-                        style="background: #333; color: #fff; border: 1px solid #555; padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; order: 1;">
-                    <select id="port-filter"
-                        style="background: #333; color: #fff; border: 1px solid #555; padding: 4px 6px; border-radius: 4px; font-size: 12px; cursor: pointer; outline: none; order: 2;">
-                        <option value="">All Ports</option>
-                        <option value="POSITION_APP">Position</option>
-                        <option value="TELEMETRY_APP">Telemetry</option>
-                        <option value="NODEINFO_APP">NodeInfo</option>
-                        <option value="TEXT_MESSAGE_APP">Text Msg</option>
-                        <option value="ROUTING_APP">Routing</option>
-                        <option value="ADMIN_APP">Admin</option>
-                        <option value="WAYPOINT_APP">Waypoint</option>
-                        <option value="MAP_REPORT_APP">Map Report</option>
-                    </select>
-                    
-                    <button id="pause-sim-btn" style="background:#333; color:#fff; border:1px solid #555; font-size:12px; cursor:pointer; padding:4px 10px; border-radius:4px; line-height:1; transition:0.2s; order: 3;">Pause</button>
-                    <label id="speed-label" style="font-size: 12px; color: #888; white-space: nowrap; order: 4;">Speed:</label>
-                    <select id="speed-control"
-                        style="background: #333; color: #fff; border: 1px solid #555; padding: 4px 6px; border-radius: 4px; font-size: 12px; cursor: pointer; order: 5;">
-                        <option value="0.25">0.25x</option>
-                        <option value="0.5">0.5x</option>
-                        <option value="0.75">0.75x</option>
-                        <option value="1" selected>1.0x</option>
-                        <option value="2">2.0x</option>
-                        <option value="5">5.0x</option>
-                        <option value="10">10.0x</option>
-                    </select>
-                    
-                    <span id="live-feed-text" style="font-size: 12px; color: #888; order: 6; margin-left: auto;">Live Feed</span>
-                    <button id="clear-term-btn" title="Clear terminal" style="background:#333; border:1px solid #555; color:#fff; font-size:12px; cursor:pointer; padding:4px 8px; border-radius:4px; line-height:1; transition:0.2s; order: 7;">Clear</button>
-                    <button id="terminal-toggle-desktop" class="term-toggle" title="Toggle terminal"
-                            style="background:#333; border:1px solid #555; color:#fff; font-size:16px; cursor:pointer; padding:2px 10px; border-radius:4px; line-height:1; transition:0.2s; order: 8;">▾</button>
+                <div id="terminal-header-bar" class="term-header-bar">
+                    <!-- Title & Search (Priority) -->
+                    <div class="term-header-search-group">
+                        <span style="color: #00bcd4; opacity: 0.8; font-weight: 600;">&gt;_</span>
+                        <input type="search" id="node-filter" list="node-datalist" placeholder="Search Node ID..." class="term-input term-input-large">
+                    </div>
+
+                    <!-- Dropdown Filters -->
+                    <div class="term-header-filter-group">
+                        <select id="port-filter" class="term-select">
+                            <option value="">All Ports</option>
+                            <option value="POSITION_APP">Position</option>
+                            <option value="TELEMETRY_APP">Telemetry</option>
+                            <option value="NODEINFO_APP">NodeInfo</option>
+                            <option value="TEXT_MESSAGE_APP">Text Msg</option>
+                            <option value="ROUTING_APP">Routing</option>
+                            <option value="ADMIN_APP">Admin</option>
+                            <option value="WAYPOINT_APP">Waypoint</option>
+                            <option value="MAP_REPORT_APP">Map Report</option>
+                        </select>
+                        <select id="hop-filter" title="Max Hops" class="term-select">
+                            <option value="">Any Hops</option>
+                            <option value="1">1 Hop</option>
+                            <option value="2">2 Hops</option>
+                            <option value="3">3 Hops</option>
+                            <option value="4">4 Hops</option>
+                        </select>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="term-action-group">
+                        <button id="pause-sim-btn" class="term-btn">Pause</button>
+                        <select id="speed-control" class="term-select">
+                            <option value="0.25">0.25x</option>
+                            <option value="0.5">0.5x</option>
+                            <option value="0.75">0.75x</option>
+                            <option value="1" selected>1.0x</option>
+                            <option value="2">2.0x</option>
+                            <option value="5">5.0x</option>
+                            <option value="10">10.0x</option>
+                        </select>
+                        <button id="clear-term-btn" class="term-btn" title="Clear terminal">Clear</button>
+                        <button class="term-toggle term-btn" title="Toggle terminal">▾</button>
+                    </div>
                 </div>
             </div>
             <div id="terminal-output"></div>
@@ -361,7 +416,9 @@ Required Notice: Copyright (c) 2026 CardoSystems
     </div>
 
     <!-- Centered Toast -->
-    <div id="centered-toast" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); color: #fff; padding: 15px 25px; border-radius: 8px; z-index: 1000000; font-size: 16px; font-weight: bold; border: 1px solid #ff5252; box-shadow: 0 4px 15px rgba(0,0,0,0.5); pointer-events: none; white-space: nowrap;"></div>
+    <div id="centered-toast"
+        style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); color: #fff; padding: 15px 25px; border-radius: 8px; z-index: 1000000; font-size: 16px; font-weight: bold; border: 1px solid #ff5252; box-shadow: 0 4px 15px rgba(0,0,0,0.5); pointer-events: none; white-space: nowrap;">
+    </div>
 
     <script type="module" src="./main.js"></script>
 
@@ -371,7 +428,8 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <div class="modal-header">
                 <h3>Deep Packet Inspection</h3>
                 <div style="display:flex; gap:10px;">
-                    <button id="copy-dpi-btn" style="background:#4caf50; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer;">Copy</button>
+                    <button id="copy-dpi-btn"
+                        style="background:#4caf50; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer;">Copy</button>
                     <button id="close-modal">&times;</button>
                 </div>
             </div>
@@ -384,83 +442,79 @@ Required Notice: Copyright (c) 2026 CardoSystems
     <!-- Node Analytics Sliding Panel -->
     <aside id="node-analytics-panel">
         <button id="close-panel">&times;</button>
-        <div class="panel-header">
-            <h2 id="panel-node-name">Node Name</h2>
-            <div id="panel-node-id" style="color: #888; font-family: monospace; font-size: 12px;"></div>
+        <div class="panel-header" style="margin-bottom: 24px; padding-right: 64px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <h2 id="panel-node-name" style="margin: 0; color: #4caf50; font-size: 18px; word-break: break-word;">Node Name</h2>
+                    <span id="panel-node-status" class="badge bg-secondary" style="font-size: 11px;">Unknown</span>
+                </div>
+                <div id="panel-node-id" style="color: #888; font-family: monospace; font-size: 12px;"></div>
+            </div>
         </div>
         <div class="panel-body">
-            <div class="stat-grid">
-                <div class="stat-box">
-                    <div class="stat-label">Model</div>
-                    <div id="panel-hw-model" class="stat-value">-</div>
+            <div class="summary-cards" style="margin-bottom: 24px;">
+                <div class="summary-card">
+                    <div class="card-metric" id="panel-traffic" style="color: #0d6efd;">0</div>
+                    <div class="card-label">Packets</div>
                 </div>
-                <div class="stat-box">
-                    <div class="stat-label">Packets</div>
-                    <div id="panel-traffic" class="stat-value">0</div>
+                <div class="summary-card">
+                    <div class="card-metric" id="panel-hw-model"
+                        style="font-size: 1.1rem; padding-top: 5px; color: #ececec;">-</div>
+                    <div class="card-label">Hardware</div>
                 </div>
             </div>
-            <h3 style="margin-top: 20px; font-size: 14px; color: #aaa;">Telemetry History</h3>
-            <div id="panel-chart"></div>
-            <h3 style="margin-top: 20px; font-size: 14px; color: #aaa;">Recent Packets</h3>
-            <div id="panel-recent-packets" style="font-size: 12px; color: #ccc;"></div>
+
+            <h3 style="margin-top: 0; font-size: 14px; color: #aaa; margin-bottom: 12px;"><i class="bi bi-graph-up"></i>
+                Telemetry History</h3>
+            <div class="table-container" style="padding: 16px; margin-bottom: 24px; position: relative; height: 250px;">
+                <canvas id="telemetry-chart"></canvas>
+            </div>
+
+            <h3 style="margin-top: 0; font-size: 14px; color: #aaa; margin-bottom: 12px;"><i class="bi bi-list-ul"></i>
+                Recent Packets</h3>
+            <div class="table-container" style="padding: 12px;">
+                <div id="panel-recent-packets" style="font-size: 12px; color: #ccc;"></div>
+            </div>
         </div>
     </aside>
     <!-- Native Settings Dialog -->
-    <dialog id="settings-modal" style="background: #222; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); width: 320px; max-width: 90vw; max-height: 85vh; overflow-y: auto;">
+    <dialog id="settings-modal"
+        style="background: #222; color: #fff; border: 1px solid #444; border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5), 0 2px 4px -2px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.5); width: 320px; max-width: 90vw; max-height: 85vh; overflow-y: auto;">
         <h3 style="margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px;">App Settings</h3>
-        
-        <!-- ponytail: moved to settings. users will love clicking 3 times to load a map. -->
-        <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #4caf50; border-radius: 6px; background: rgba(76, 175, 80, 0.05);">
+
+        <div
+            style="margin-bottom: 15px; padding: 10px; border: 1px solid #4caf50; border-radius: 8px; background: rgba(76, 175, 80, 0.05);">
             <div style="font-size: 12px; color: #4caf50; font-weight: bold; margin-bottom: 8px;">My Maps📍</div>
             <div id="recent-maps" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
         </div>
 
+
         <div style="margin-bottom: 15px;">
-            <label style="display: block; font-size: 12px; color: #aaa; margin-bottom: 5px;">Offline Tile Cache Detail</label>
-            <select id="setting-zoom" style="background: #333; color: #fff; border: 1px solid #555; padding: 6px; border-radius: 4px; width: 100%; outline: none;">
-                <option value="10" selected>Level 10 (Towns - Fast, 350 tiles)</option>
-                <option value="12">Level 12 (Streets - Recommended, 3500 tiles)</option>
-                <option value="13">Level 13 (High Detail - Slow, 14000 tiles)</option>
-                <option value="14">Level 14 (Ultra - Danger, 56000 tiles)</option>
-            </select>
-            <p style="font-size: 10px; color: #f44336; margin-top: 5px; margin-bottom: 10px;">Warning: >12 may cause CDN bans or storage errors.</p>
-            
-            <div style="background: #111; padding: 10px; border-radius: 4px; border: 1px solid #333;">
-                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px;">
-                    <span style="color: #00bcd4;">Background Cache</span>
-                    <span id="cache-eta" style="color: #aaa;">Calculating...</span>
-                </div>
-                <progress id="cache-progress" value="0" max="100" style="width: 100%; height: 8px; border-radius: 4px;"></progress>
-                <div id="cache-stats" style="font-size: 10px; color: #888; text-align: right; margin-top: 2px;">0 / 0 tiles</div>
+            <label style="display: block; font-size: 12px; color: #aaa; margin-bottom: 8px;">Quick Actions</label>
+            <div style="display: flex; gap: 8px;">
+                <button id="btn-modal-tutorial"
+                    style="flex: 1; background: #e91e63; border: none; color: white; padding: 10px 16px; min-height: 40px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">Tutorial
+                    🎓</button>
+                <button id="btn-modal-home" onclick="window.goHome()"
+                    style="flex: 1; background: #9c27b0; border: none; color: white; padding: 10px 16px; min-height: 40px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">HOME
+                    🌐</button>
             </div>
         </div>
 
         <div style="margin-bottom: 15px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                 <label style="font-size: 12px; color: #aaa;">Network Node Spread</label>
-                <button id="btn-reset-spread" style="background: transparent; border: 1px solid #555; color: #aaa; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 10px;">Reset</button>
+                <button id="btn-reset-spread"
+                    style="background: transparent; border: 1px solid #555; color: #aaa; padding: 8px 12px; min-height: 40px; border-radius: 4px; cursor: pointer; font-size: 11px;">Reset</button>
             </div>
-            <input type="range" id="setting-d3-spread" min="-1000" max="-50" value="-300" style="width: 100%; accent-color: #00bcd4;">
-        </div>
-
-        <div style="margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
-            <label style="font-size: 12px; color: #aaa;">Color Packets by Type (Port)</label>
-            <input type="checkbox" id="setting-color-by-type" style="transform: scale(1.2); cursor: pointer;">
+            <input type="range" id="setting-d3-spread" min="-1000" max="-50" value="-1000"
+                style="width: 100%; accent-color: #00bcd4;">
         </div>
 
         <div style="margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
             <label style="font-size: 12px; color: #aaa;">Disable Auto-Tours</label>
-            <input type="checkbox" id="setting-disable-tours" style="transform: scale(1.2); cursor: pointer;">
-        </div>
-
-        <div style="margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
-            <label style="font-size: 12px; color: #aaa;">Reset Tutorial Progress</label>
-            <button id="btn-reset-tours" style="background: #e91e63; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Reset Now</button>
-        </div>
-
-        <div style="margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
-            <label style="font-size: 12px; color: #aaa;">Check for App Updates</label>
-            <button id="btn-check-updates" style="background: #3f51b5; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Search</button>
+            <input type="checkbox" id="setting-disable-tours"
+                style="width: 16px; height: 16px; cursor: pointer; accent-color: #00bcd4; margin: 0;">
         </div>
 
         <div style="text-align: center; font-size: 11px; color: #888; margin-bottom: 15px;">
@@ -468,16 +522,10 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <span id="build-timestamp" style="font-size: 9px; opacity: 0.6;"></span>
         </div>
 
-        <div style="text-align: center; margin-bottom: 20px;">
-            <a href="https://api.whatsapp.com/send?text=Check%20out%20Mesh%20Log%20Mapper!%20https://meshlog.camal.eu" target="_blank">
-                <img id="share-banner" src="./banner_en.gif" style="width: 100%; max-width: 300px; border-radius: 8px; border: 1px solid #444; display: block; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
-            </a>
-            <div style="font-size: 10px; color: #aaa; margin-top: 5px;">Click banner to share</div>
-            <script>if(navigator.language.startsWith('pt')) document.getElementById('share-banner').src='./banner_pt.gif';</script>
-        </div>
-
         <div style="text-align: right; border-top: 1px solid #444; padding-top: 15px;">
-            <button id="btn-settings-close" style="background: #4caf50; border: none; color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Save & Close</button>
+            <button id="btn-settings-close"
+                style="background: #4caf50; border: none; color: white; padding: 10px 16px; min-height: 40px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">Save
+                & Close</button>
         </div>
     </dialog>
 </body>
