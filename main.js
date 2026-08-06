@@ -373,6 +373,10 @@ window.addEventListener('load', async () => {
 
     worker.onmessage = function (e) {
         if (e.data.type === 'DONE') {
+            if (!e.data.isDuplicate && e.data.graphData && !e.data.graphData.customMapName) {
+                const customMapName = prompt("Name this map:", "My Meshlog Map") || "My Meshlog Map";
+                e.data.graphData.customMapName = customMapName;
+            }
             if (e.data.pendingSync) {
                 idb.set('syncQueue', e.data.graphData);
             }
@@ -462,9 +466,8 @@ window.addEventListener('load', async () => {
         document.getElementById('file-picker-container').style.display = 'none';
         document.getElementById('loading-spinner-container').style.display = 'flex';
         const token = await getTurnstileToken();
-        const customMapName = prompt("Name this map:", "My Meshlog Map") || "My Meshlog Map";
         document.getElementById('loading-text').innerText = "NUCLEAR REACTOR 4 STARTING...";
-        worker.postMessage({ cmd: 'parse_file', file: file, customName: customMapName, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
+        worker.postMessage({ cmd: 'parse_file', file: file, customName: null, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
     });
 
     // Global drag and drop support
@@ -483,9 +486,8 @@ window.addEventListener('load', async () => {
         showLoadingScreen();
 
         const token = await getTurnstileToken();
-        const customMapName = prompt("Name this map:", "My Meshlog Map") || "My Meshlog Map";
         document.getElementById('loading-text').innerText = "NUCLEAR REACTOR 4 STARTING...";
-        worker.postMessage({ cmd: 'parse_file', file: file, customName: customMapName, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
+        worker.postMessage({ cmd: 'parse_file', file: file, customName: null, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
     });
 
     // Test environment mock trigger
@@ -576,11 +578,8 @@ function initializeDashboard(graphData) {
             showLoadingScreen();
 
             const token = await getTurnstileToken();
-            const customMapName = prompt("Name this map:", "My Meshlog Map") || "My Meshlog Map";
-
             document.getElementById('loading-text').innerText = "NUCLEAR REACTOR 4 STARTING...";
-
-            worker.postMessage({ cmd: 'parse_file', file: file, customName: customMapName, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
+            worker.postMessage({ cmd: 'parse_file', file: file, customName: null, origin: (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin), turnstileToken: token });
         };
     }
 
