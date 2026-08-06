@@ -26,13 +26,13 @@ let worker;
 // ponytail: lazy raw IDB wrapper, skip idb-keyval dep
 
 const idb = {
-    open: () => new Promise(r => { 
+    open: () => new Promise(r => {
         try {
-            let q = indexedDB.open('m_db',1); 
-            q.onupgradeneeded = () => { try{q.result.createObjectStore('kv')}catch(e){} }; 
-            q.onsuccess = () => r(q.result); 
+            let q = indexedDB.open('m_db', 1);
+            q.onupgradeneeded = () => { try { q.result.createObjectStore('kv') } catch (e) { } };
+            q.onsuccess = () => r(q.result);
             q.onerror = q.onblocked = () => r(null);
-        } catch(e) { r(null); }
+        } catch (e) { r(null); }
     }),
     get: k => Promise.race([
         new Promise(r => setTimeout(() => r(null), 1000)),
@@ -48,14 +48,14 @@ const idb = {
             } catch (e) { return null; }
         })()
     ]),
-    set: (k,v) => Promise.race([
+    set: (k, v) => Promise.race([
         new Promise(r => setTimeout(() => r(null), 1500)),
         (async () => {
             try {
                 const db = await idb.open();
                 if (!db) return null;
                 return await new Promise(r => {
-                    let req = db.transaction('kv','readwrite').objectStore('kv').put(v,k);
+                    let req = db.transaction('kv', 'readwrite').objectStore('kv').put(v, k);
                     req.onsuccess = req.onerror = () => r(true);
                 });
             } catch (e) { return null; }
@@ -78,13 +78,13 @@ window.copyShareLink = (hash = '', onSuccess) => {
     const text = base + window.location.pathname + search + hash;
 
     if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text).then(onSuccess).catch(() => {});
+        navigator.clipboard.writeText(text).then(onSuccess).catch(() => { });
     } else {
         const input = document.createElement('textarea');
         input.value = text;
         document.body.appendChild(input);
         input.select();
-        try { document.execCommand('copy'); onSuccess?.(); } catch (e) {}
+        try { document.execCommand('copy'); onSuccess?.(); } catch (e) { }
         document.body.removeChild(input);
     }
 };
@@ -117,7 +117,7 @@ function getTurnstileToken() {
     return new Promise((resolve) => {
         if (!window.turnstile) return resolve(null);
         document.getElementById('loading-text').innerText = "VERIFYING SECURITY...";
-        
+
         // ponytail: stop hanging forever on locked Android WebViews
         let done = false;
         let wid;
@@ -125,11 +125,11 @@ function getTurnstileToken() {
             if (done) return;
             done = true;
             clearTimeout(to);
-            try { window.turnstile.remove(wid); } catch (e) {}
+            try { window.turnstile.remove(wid); } catch (e) { }
             resolve(res);
         };
         const to = setTimeout(() => cleanup(null), 60000);
-        
+
         try {
             wid = window.turnstile.render('#cf-turnstile-widget', {
                 sitekey: '0x4AAAAAADoa_6pJqFVy3kJU',
@@ -144,37 +144,37 @@ function getTurnstileToken() {
     });
 }
 
-    // ponytail: native PWA install prompt
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        const btn = document.getElementById('btn-install');
-        if (btn) {
-            btn.style.display = 'block';
-            btn.onclick = async () => {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') btn.style.display = 'none';
-                deferredPrompt = null;
-            };
-        }
-    });
+// ponytail: native PWA install prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const btn = document.getElementById('btn-install');
+    if (btn) {
+        btn.style.display = 'block';
+        btn.onclick = async () => {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') btn.style.display = 'none';
+            deferredPrompt = null;
+        };
+    }
+});
 
-    // ponytail: native wake lock to keep screen alive
-    let wakeLock = null;
-    const requestWakeLock = async () => {
-        try {
-            if ('wakeLock' in navigator) {
-                wakeLock = await navigator.wakeLock.request('screen');
-                wakeLock.addEventListener('release', () => { wakeLock = null; });
-            }
-        } catch (err) {}
-    };
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
-    });
-    requestWakeLock();
+// ponytail: native wake lock to keep screen alive
+let wakeLock = null;
+const requestWakeLock = async () => {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            wakeLock.addEventListener('release', () => { wakeLock = null; });
+        }
+    } catch (err) { }
+};
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
+});
+requestWakeLock();
 
 window.addEventListener('load', async () => {
     // ponytail: restore robust settings from Native Preferences to survive iOS/Android localstorage wiping
@@ -186,7 +186,7 @@ window.addEventListener('load', async () => {
         }
         const { value: robustRecent } = await Preferences.get({ key: 'recentMaps' });
         if (robustRecent) localStorage.setItem('recentMaps', robustRecent);
-    } catch(e) {}
+    } catch (e) { }
 
     initThreeBg();
     const tsEl = document.getElementById('build-timestamp');
@@ -234,7 +234,7 @@ window.addEventListener('load', async () => {
         });
     }
 
-    window.loadMap = function(id) {
+    window.loadMap = function (id) {
         window.history.pushState({}, '', '?map=' + id);
         document.getElementById('file-picker-container').style.display = 'none';
         document.getElementById('loading-spinner-container').style.display = 'flex';
@@ -252,9 +252,9 @@ window.addEventListener('load', async () => {
     }
     const rmDiv = document.getElementById('recent-maps');
     if (rmDiv) {
-        rmDiv.innerHTML = (recent.length > 0 
-                ? recent.map(r => `<a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" style="color:#4caf50;text-decoration:none;border:1px solid #4caf50;padding:4px 8px;border-radius:4px;font-size:12px;" title="${r.id}">${escapeHTML(r.name || r.id)}</a>`).join('')
-                : `<span style="color:#555;font-size:12px;">None yet.</span>`);
+        rmDiv.innerHTML = (recent.length > 0
+            ? recent.map(r => `<a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" style="color:#4caf50;text-decoration:none;border:1px solid #4caf50;padding:4px 8px;border-radius:4px;font-size:12px;" title="${r.id}">${escapeHTML(r.name || r.id)}</a>`).join('')
+            : `<span style="color:#555;font-size:12px;">None yet.</span>`);
     }
 
     if (mapId) {
@@ -326,69 +326,7 @@ window.addEventListener('load', async () => {
     window.addEventListener('offline', updateOfflineState);
     updateOfflineState();
 
-    // ponytail: hyper-focus cache on Portugal bounding box up to zoom 12 (~3500 tiles) progressively
-    if ('serviceWorker' in navigator) {
-        setTimeout(() => {
-            const lon2tile = (lon, z) => Math.floor((lon + 180) / 360 * Math.pow(2, z));
-            const lat2tile = (lat, z) => Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z));
-            
-            // Portugal Bounding Box
-            const nLat = 42.2, sLat = 36.9, wLon = -9.6, eLon = -6.1;
-            const tileQueue = [];
-            
-            // ponytail: hyper-focus cache on Portugal bounding box up to zoom 12 (~3500 tiles) progressively
-            const maxZ = parseInt(localStorage.getItem('offline_zoom_level') || '10', 10);
-            const activeUrl = Object.values(window.leafletMap?._layers || {}).find(l => l._url)?._url || 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-
-            for(let z=0; z<=maxZ; z++) {
-                const xMin = lon2tile(wLon, z);
-                const xMax = lon2tile(eLon, z);
-                const yMin = lat2tile(nLat, z); // lower Y is higher Lat
-                const yMax = lat2tile(sLat, z);
-
-                for(let x=xMin; x<=xMax; x++) {
-                    for(let y=yMin; y<=yMax; y++) {
-                        tileQueue.push(activeUrl.replace('{s}', 'a').replace('{z}', z).replace('{x}', x).replace('{y}', y).replace('{r}', ''));
-                    }
-                }
-            }
-
-            const totalTiles = tileQueue.length;
-            const startTime = Date.now();
-            let tilesDone = 0;
-
-            const processQueue = async () => {
-                while(tileQueue.length > 0) {
-                    if (!navigator.onLine) { await new Promise(r=>setTimeout(r,5000)); continue; }
-                    fetch(tileQueue.shift(), {mode:'cors'}).catch(()=>{});
-                    tilesDone++;
-                    
-                    const pBar = document.getElementById('cache-progress');
-                    const pStats = document.getElementById('cache-stats');
-                    const pEta = document.getElementById('cache-eta');
-                    if (pBar && pStats && pEta) {
-                        pBar.max = totalTiles;
-                        pBar.value = tilesDone;
-                        pStats.innerText = `${tilesDone} / ${totalTiles} tiles`;
-                        
-                        if (tilesDone > 5 && tileQueue.length > 0) {
-                            const elapsed = Date.now() - startTime;
-                            const msPerTile = elapsed / tilesDone;
-                            const remaining = tileQueue.length * msPerTile;
-                            const sec = Math.floor(remaining / 1000);
-                            pEta.innerText = sec > 60 ? `ETA: ${Math.floor(sec/60)}m ${sec%60}s` : `ETA: ${sec}s`;
-                        } else if (tileQueue.length === 0) {
-                            pEta.innerText = 'Completed';
-                            pEta.style.color = '#4caf50';
-                        }
-                    }
-
-                    await new Promise(r=>setTimeout(r,50)); // 50ms trickle to avoid network blasting
-                }
-            };
-            processQueue();
-        }, 3000);
-    }
+    // ponytail: tile prefetcher nuked - relying on native browser / service worker cache on render
 
     // If loaded via a shared ?map= URL, the current URL is already shareable
     if (mapId) {
@@ -403,7 +341,7 @@ window.addEventListener('load', async () => {
             if (e.data.shareId) {
                 // ponytail: save full history
                 idb.set(`history_${e.data.shareId}`, e.data.graphData);
-                
+
                 window.history.replaceState({}, '', '?map=' + e.data.shareId);
                 // ponytail: always use app link instead of localhost
                 const appUrl = (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('capacitor')) ? 'https://meshlog.camal.eu' : window.location.origin;
@@ -415,7 +353,7 @@ window.addEventListener('load', async () => {
                     setTimeout(() => btn.innerText = "Upload Log", 2000);
                 }
             }
-            
+
             // ponytail: show duplicate warning toast
             if (e.data.isDuplicate) {
                 const toast = document.getElementById('centered-toast');
@@ -497,7 +435,7 @@ window.addEventListener('load', async () => {
         e.stopPropagation();
         e.dataTransfer.dropEffect = 'copy';
     });
-    
+
     document.body.addEventListener('drop', async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -541,7 +479,7 @@ if (navigator.storage && navigator.storage.persist) {
 
 function initializeDashboard(graphData) {
     idb.set('autoSave', graphData); // ponytail: auto-save locally to survive refresh
-    
+
     if (graphData.shareId && graphData.customMapName) {
         let recent = JSON.parse(localStorage.getItem('recentMaps') || '[]');
         recent = recent.map(r => typeof r === 'string' ? { id: r, name: r } : r);
@@ -664,24 +602,24 @@ function initializeDashboard(graphData) {
     // --- TERMINAL TOGGLE (GLOBAL) ---
     const terminalToggles = document.querySelectorAll('.term-toggle');
     const terminalContainer = document.getElementById('terminal-container');
-    
+
     if (hasSeenTour && window.innerWidth <= 768) {
         terminalContainer.classList.add('collapsed');
         terminalToggles.forEach(t => t.textContent = '▴');
-        setTimeout(() => { 
-            if (window.leafletMap) window.leafletMap.invalidateSize(); 
+        setTimeout(() => {
+            if (window.leafletMap) window.leafletMap.invalidateSize();
             window.dispatchEvent(new Event('resize'));
         }, 350);
     } else {
         terminalToggles.forEach(t => t.textContent = '▾');
     }
-    
+
     terminalToggles.forEach(toggle => {
         toggle.onclick = () => {
             const isCollapsed = terminalContainer.classList.toggle('collapsed');
             terminalToggles.forEach(t => t.textContent = isCollapsed ? '▴' : '▾');
-            setTimeout(() => { 
-                if (window.leafletMap) window.leafletMap.invalidateSize(); 
+            setTimeout(() => {
+                if (window.leafletMap) window.leafletMap.invalidateSize();
                 window.dispatchEvent(new Event('resize'));
             }, 350);
         };
@@ -734,7 +672,8 @@ function initializeDashboard(graphData) {
 
     // ponytail: settings modal logic
     const btnSettings = document.getElementById('btn-settings');
-    
+    const btnLandingSettings = document.getElementById('btn-landing-settings');
+
     // Resize listener for responsive terminal header
     const mobileSearchInput = document.getElementById('node-filter');
     if (mobileSearchInput) {
@@ -753,7 +692,7 @@ function initializeDashboard(graphData) {
 
     const settingD3Spread = document.getElementById('setting-d3-spread');
     const btnResetSpread = document.getElementById('btn-reset-spread');
-    
+
     if (settingD3Spread) {
         settingD3Spread.value = localStorage.getItem('d3_spread') || '-300';
         settingD3Spread.addEventListener('input', (e) => {
@@ -777,21 +716,21 @@ function initializeDashboard(graphData) {
         });
     }
 
-    if (btnSettings && settingsModal) {
-        btnSettings.addEventListener('click', async () => {
-            settingDisableTours.checked = localStorage.getItem('disable_tours') === 'true';
-            if (settingD3Spread) settingD3Spread.value = localStorage.getItem('d3_spread') || '-1000';
-            settingsModal.showModal();
-            try {
-                const cache = await caches.open('meshlog-active-tiles');
-                const keys = await cache.keys();
-            } catch(e) {}
-        });
+    const openSettings = async () => {
+        if (!settingsModal) return;
+        settingDisableTours.checked = localStorage.getItem('disable_tours') === 'true';
+        if (settingD3Spread) settingD3Spread.value = localStorage.getItem('d3_spread') || '-1000';
+        settingsModal.showModal();
+    };
 
+    if (btnSettings) btnSettings.addEventListener('click', openSettings);
+    if (btnLandingSettings) btnLandingSettings.addEventListener('click', openSettings);
+
+    if (btnSettingsClose) {
         btnSettingsClose.addEventListener('click', () => {
             localStorage.setItem('disable_tours', settingDisableTours.checked ? 'true' : 'false');
             if (settingD3Spread) localStorage.setItem('d3_spread', settingD3Spread.value);
-            
+
             Preferences.set({
                 key: 'app_settings',
                 value: JSON.stringify({
@@ -803,52 +742,6 @@ function initializeDashboard(graphData) {
             settingsModal.close();
         });
 
-        async function downloadTiles(maxZoom) {
-            if (!window.leafletMap) return;
-            const bounds = window.leafletMap.getBounds();
-            let activeUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-            window.leafletMap.eachLayer(l => { if(l._url) activeUrl = l._url; });
-            
-            let urls = [];
-            for (let z = 1; z <= maxZoom; z++) {
-                const nw = window.leafletMap.project(bounds.getNorthWest(), z);
-                const se = window.leafletMap.project(bounds.getSouthEast(), z);
-                const minX = Math.floor(nw.x / 256), maxX = Math.floor(se.x / 256);
-                const minY = Math.floor(nw.y / 256), maxY = Math.floor(se.y / 256);
-                for (let x = minX; x <= maxX; x++) {
-                    for (let y = minY; y <= maxY; y++) {
-                        let u = activeUrl.replace('{z}', z).replace('{x}', x).replace('{y}', y).replace('{s}', 'a').replace('{r}', '');
-                        urls.push(u);
-                        if (urls.length > 56000) break;
-                    }
-                    if (urls.length > 56000) break;
-                }
-            }
-            
-            const pBar = document.getElementById('cache-progress');
-            const pEta = document.getElementById('cache-eta');
-            const pStats = document.getElementById('cache-stats');
-            if(pBar) { pBar.max = urls.length; pBar.value = 0; }
-            if(pEta) pEta.innerText = "Downloading...";
-            if(pStats) pStats.innerText = `0 / ${urls.length} tiles`;
-            
-            let done = 0;
-            // Fetch in batches of 10 to utilize SW caching without freezing UI
-            for (let i = 0; i < urls.length; i += 10) {
-                const batch = urls.slice(i, i + 10);
-                await Promise.allSettled(batch.map(u => fetch(u, { mode: 'cors' })));
-                done += batch.length;
-                if(pBar) pBar.value = done;
-                if(pStats) pStats.innerText = `${done} / ${urls.length} tiles`;
-            }
-            if(pEta) pEta.innerText = "Completed";
-            
-            try {
-                const cache = await caches.open('leaflet-tiles-cache');
-                const keys = await cache.keys();
-                if (pStats) pStats.innerText = `${keys.length} tiles in cache`;
-            } catch(e) {}
-        }
     }
 
 
@@ -867,7 +760,7 @@ function initializeDashboard(graphData) {
     const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 });
     const topoTiles = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap', maxZoom: 17 });
     const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
-    
+
     const baseMaps = {
         "Carto Dark": darkTiles,
         "Carto Light": lightTiles,
@@ -876,17 +769,20 @@ function initializeDashboard(graphData) {
         "ESRI World TOPO": esriTopo,
         "ESRI Satellite": satTiles
     };
-    
+
     const savedLayerName = localStorage.getItem('selectedMapLayer') || "Carto Dark";
     const defaultLayer = baseMaps[savedLayerName] || darkTiles;
 
+    // ponytail: default center on Continental Portugal [39.5, -8.0] at zoom 7 if unset/overzoomed
+    const portugalCenter = [39.5, -8.0];
     const savedLat = localStorage.getItem('map_lat');
     const savedLng = localStorage.getItem('map_lng');
     const savedZoom = localStorage.getItem('map_zoom');
-    const center = (savedLat && savedLng) ? [parseFloat(savedLat), parseFloat(savedLng)] : [0, 0];
-    const zoom = savedZoom ? parseInt(savedZoom, 10) : 2;
+    const center = (savedLat && savedLng && Math.abs(parseFloat(savedLat)) > 0.01) ? [parseFloat(savedLat), parseFloat(savedLng)] : portugalCenter;
+    let zoom = savedZoom ? Math.min(parseInt(savedZoom, 10), 12) : 7;
+    if (!savedLat || !savedLng) zoom = 7;
     const map = L.map('map', { layers: [defaultLayer], zoomControl: false }).setView(center, zoom);
-    
+
     map.on('moveend', () => {
         const c = map.getCenter();
         localStorage.setItem('map_lat', c.lat);
@@ -894,11 +790,11 @@ function initializeDashboard(graphData) {
         localStorage.setItem('map_zoom', map.getZoom());
     });
     window.leafletMap = map;
-    
-    map.on('baselayerchange', function(e) {
+
+    map.on('baselayerchange', function (e) {
         localStorage.setItem('selectedMapLayer', e.name);
     });
-    
+
     // ponytail: bg click clears path
     map.on('click', () => {
         if (window.lastClickedNodeId) {
@@ -906,9 +802,9 @@ function initializeDashboard(graphData) {
             highlightPath(null, null);
         }
     });
-    
+
     L.control.layers(baseMaps).addTo(map);
-    
+
     // Disable online-only maps if offline
     if (!navigator.onLine) {
         setTimeout(() => {
@@ -920,7 +816,7 @@ function initializeDashboard(graphData) {
         }, 100);
     }
     L.control.scale({ imperial: false, metric: true }).addTo(map);
-    
+
     // On mobile the layout isn't fully settled at map creation time — force a size recalc
     if (window.innerWidth <= 768) {
         setTimeout(() => map.invalidateSize(), 300);
@@ -932,7 +828,7 @@ function initializeDashboard(graphData) {
     function renderChartJS(telemetry) {
         const ctx = document.getElementById('telemetry-chart');
         if (!ctx) return;
-        
+
         if (nodeTelemetryChart) {
             nodeTelemetryChart.destroy();
         }
@@ -1013,7 +909,7 @@ function initializeDashboard(graphData) {
         if (node.telemetry && node.telemetry.length > 0) {
             const lastSeen = node.telemetry[node.telemetry.length - 1].time;
             const now = Date.now() / 1000;
-            if (now - lastSeen < 3600) { 
+            if (now - lastSeen < 3600) {
                 statusBadge.className = 'badge bg-success';
                 statusBadge.innerText = 'Online';
             } else {
@@ -1075,33 +971,33 @@ function initializeDashboard(graphData) {
         const adj = {};
         graphData.edges.forEach(e => {
             const s = e.source.id || e.source; const t = e.target.id || e.target;
-            if(!adj[s]) adj[s] = []; if(!adj[t]) adj[t] = [];
+            if (!adj[s]) adj[s] = []; if (!adj[t]) adj[t] = [];
             adj[s].push(t); adj[t].push(s);
         });
         const q = [[src]]; const visited = new Set([src]);
         let path = null;
-        while(q.length > 0) {
+        while (q.length > 0) {
             const p = q.shift(); const curr = p[p.length - 1];
-            if(curr === dst) { path = p; break; }
-            for(const n of (adj[curr] || [])) {
-                if(!visited.has(n)) { visited.add(n); q.push([...p, n]); }
+            if (curr === dst) { path = p; break; }
+            for (const n of (adj[curr] || [])) {
+                if (!visited.has(n)) { visited.add(n); q.push([...p, n]); }
             }
         }
-        
+
         if (window.leafletRouteGroup) { window.leafletMap.removeLayer(window.leafletRouteGroup); }
         if (window.highlightD3Route) window.highlightD3Route(path);
 
-        if(!path) return;
+        if (!path) return;
 
         const latlngs = [];
         let valid = true;
-        for(let i=0; i<path.length; i++) {
+        for (let i = 0; i < path.length; i++) {
             const n = graphData.nodes.find(node => node.id === path[i]);
-            if(n && n.lat !== undefined && n.lon !== undefined) latlngs.push([n.lat, n.lon]);
+            if (n && n.lat !== undefined && n.lon !== undefined) latlngs.push([n.lat, n.lon]);
             else valid = false;
         }
-        if(valid && latlngs.length > 1) {
-            window.leafletRouteGroup = L.polyline(latlngs, {color: '#00e5ff', weight: 6, opacity: 0.8}).addTo(window.leafletMap);
+        if (valid && latlngs.length > 1) {
+            window.leafletRouteGroup = L.polyline(latlngs, { color: '#00e5ff', weight: 6, opacity: 0.8 }).addTo(window.leafletMap);
         }
 
         // ponytail: skip dimming geo map markers on route
@@ -1113,8 +1009,8 @@ function initializeDashboard(graphData) {
                 }
                 const s = line.edgeSource; const t = line.edgeTarget;
                 let inPath = false;
-                for (let i=0; i<path.length-1; i++) {
-                    if ((s === path[i] && t === path[i+1]) || (s === path[i+1] && t === path[i])) inPath = true;
+                for (let i = 0; i < path.length - 1; i++) {
+                    if ((s === path[i] && t === path[i + 1]) || (s === path[i + 1] && t === path[i])) inPath = true;
                 }
                 line.setStyle({ opacity: inPath ? 1 : 0.1 });
             });
@@ -1132,7 +1028,7 @@ function initializeDashboard(graphData) {
 
     const markerCluster = L.markerClusterGroup();
     window.precisionCircles = {};
-    
+
     // Draw Malla-style link health lines (dashed) on Leaflet Map
     if (window.geoEdgesLayerGroup) {
         map.removeLayer(window.geoEdgesLayerGroup);
@@ -1175,7 +1071,7 @@ function initializeDashboard(graphData) {
                 else if (role === 'CLIENT_BASE') roleClass = 'marker-role-client-base';
                 else if (role === 'CLIENT_MUTE') roleClass = 'marker-role-client-mute';
             }
-            
+
             let bgStyle = isSrc ? 'background-color: #e91e63 !important;' : '';
 
             const markerOptions = {
@@ -1259,10 +1155,10 @@ function initializeDashboard(graphData) {
         const targetMarker = markers[edge.target];
         if (sourceMarker && targetMarker) {
             const points = [sourceMarker.getLatLng(), targetMarker.getLatLng()];
-            const polyline = L.polyline(points, { 
-                color: getLinkColor(edge.snr), 
-                weight: getThickness(edge.snr), 
-                opacity: 0.8 
+            const polyline = L.polyline(points, {
+                color: getLinkColor(edge.snr),
+                weight: getThickness(edge.snr),
+                opacity: 0.8
             }).addTo(map);
             polyline.edgeSource = edge.source;
             polyline.edgeTarget = edge.target;
@@ -1271,7 +1167,7 @@ function initializeDashboard(graphData) {
             const targetNode = graphData.nodes.find(n => n.id === edge.target);
             const sourceName = sourceNode ? (sourceNode.long_name || sourceNode.short_name || edge.source) : edge.source;
             const targetName = targetNode ? (targetNode.long_name || targetNode.short_name || edge.target) : edge.target;
-            
+
             const snrText = edge.snr !== null && edge.snr !== undefined ? `${edge.snr.toFixed(1)} dB` : 'Unknown';
 
             let popupHtml = `<div style="font-family: sans-serif; line-height: 1.4;">`;
@@ -1280,7 +1176,7 @@ function initializeDashboard(graphData) {
             popupHtml += `<div style="font-size: 13px;"><b>To:</b> ${escapeHTML(targetName)}</div>`;
             popupHtml += `<div style="font-size: 13px;"><b>Avg SNR:</b> <span style="color: ${getLinkColor(edge.snr)}">${snrText}</span></div>`;
             popupHtml += `</div>`;
-            
+
             polyline.bindPopup(popupHtml, { className: 'traceroute-popup' });
 
             routeLines.push(polyline);
@@ -1289,34 +1185,45 @@ function initializeDashboard(graphData) {
     window.leafletRouteLines = routeLines;
 
     function animateSinglePacket(points, color = '#ffeb3b') {
-        if (points.length < 2) return;
-        const icon = L.divIcon({ className: '', iconSize: [16, 16], html: `<div style="width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 0 8px ${color}, 0 0 16px ${color}, 0 0 24px ${color};z-index:9000;"></div>` }); // ponytail: dynamic color icon
-        const dot = L.marker(points[0], { icon: icon }).addTo(map);
+        if (!points || points.length < 2) return;
 
-        let currentSegment = 0, progress = 0;
-        let lastTime = performance.now();
+        // ponytail: clean L.circleMarker projectile rewrite from scratch
+        const projectile = L.circleMarker(points[0], {
+            radius: 5,
+            fillColor: color,
+            color: '#ffffff',
+            weight: 1.5,
+            fillOpacity: 0.95,
+            interactive: false
+        }).addTo(map);
 
-        function step(now) {
-            if (currentSegment >= points.length - 1) {
-                map.removeLayer(dot);
+        let seg = 0, t = 0;
+        let last = performance.now();
+
+        function animate(now) {
+            if (seg >= points.length - 1) {
+                map.removeLayer(projectile);
                 return;
             }
-            const p1 = points[currentSegment];
-            const p2 = points[currentSegment + 1];
+            const speed = parseFloat(document.getElementById('speed-control')?.value) || 1;
+            const dt = Math.min((now - last) / 1000, 0.1);
+            last = now;
 
-            const speedMultiplier = parseFloat(document.getElementById('speed-control').value) || 1;
-            const dt = now - lastTime;
-            lastTime = now;
-            progress += 0.001 * dt * speedMultiplier; // ponytail: time-based progress for precision
-
-            if (progress >= 1) {
-                progress = 0; currentSegment++;
+            t += dt * speed * 1.5;
+            if (t >= 1) {
+                t = 0;
+                seg++;
             } else {
-                dot.setLatLng([p1.lat + (p2.lat - p1.lat) * progress, p1.lng + (p2.lng - p1.lng) * progress]);
+                const pA = points[seg];
+                const pB = points[seg + 1];
+                projectile.setLatLng([
+                    pA.lat + (pB.lat - pA.lat) * t,
+                    pA.lng + (pB.lng - pA.lng) * t
+                ]);
             }
-            requestAnimationFrame(step);
+            requestAnimationFrame(animate);
         }
-        requestAnimationFrame(step);
+        requestAnimationFrame(animate);
     }
 
     // --- SIDEBAR LONGEST LINKS ---
@@ -1337,17 +1244,17 @@ function initializeDashboard(graphData) {
         tbody.innerHTML = '';
         if (countEl) countEl.textContent = graphData.longestLinks.length;
         if (totalEl) totalEl.textContent = graphData.longestLinks.length;
-        
+
         if (graphData.longestLinks.length > 0 && longestEl) {
             longestEl.textContent = graphData.longestLinks[0].distanceKm.toFixed(2) + ' km';
         }
 
         graphData.longestLinks.forEach((link, idx) => {
             const tr = document.createElement('tr');
-            
+
             const snrClass = getSNRBadgeClass(link.snr);
             const snrText = link.snr !== null ? link.snr.toFixed(1) + ' dB' : 'N/A';
-            
+
             tr.innerHTML = `
                 <td><strong>${idx + 1}</strong></td>
                 <td>
@@ -1360,17 +1267,17 @@ function initializeDashboard(graphData) {
                 </td>
                 <td><span class="badge ${snrClass}">${snrText}</span></td>
             `;
-            
+
             tr.style.cursor = 'pointer';
             tr.onclick = (e) => {
-                if (e.target.tagName === 'A') return; 
+                if (e.target.tagName === 'A') return;
                 if (markers[link.source] && markers[link.target]) {
                     const group = new L.featureGroup([markers[link.source], markers[link.target]]);
                     map.fitBounds(group.getBounds().pad(0.1));
                     btnMap.click(); // Switch back to map view
                 }
             };
-            
+
             tbody.appendChild(tr);
         });
     }
@@ -1524,29 +1431,29 @@ function initializeDashboard(graphData) {
             .style("pointer-events", "none")
             .text(d => d.short_name === 'NXTW' ? "🗼 NXTW" : (d.short_name || d.id.substring(0, 5)));
 
-        window.highlightD3Route = function(path) {
+        window.highlightD3Route = function (path) {
             link.attr("stroke", d => {
                 if (!path) return linkColor(d.snr);
                 const s = d.source.id || d.source;
                 const t = d.target.id || d.target;
-                for (let i=0; i<path.length-1; i++) {
-                    if ((s === path[i] && t === path[i+1]) || (s === path[i+1] && t === path[i])) return "#00e5ff";
+                for (let i = 0; i < path.length - 1; i++) {
+                    if ((s === path[i] && t === path[i + 1]) || (s === path[i + 1] && t === path[i])) return "#00e5ff";
                 }
                 return linkColor(d.snr);
             }).attr("stroke-width", d => {
                 if (!path) return thicknessScale(d.snr);
                 const s = d.source.id || d.source;
                 const t = d.target.id || d.target;
-                for (let i=0; i<path.length-1; i++) {
-                    if ((s === path[i] && t === path[i+1]) || (s === path[i+1] && t === path[i])) return 6;
+                for (let i = 0; i < path.length - 1; i++) {
+                    if ((s === path[i] && t === path[i + 1]) || (s === path[i + 1] && t === path[i])) return 6;
                 }
                 return thicknessScale(d.snr);
             }).attr("stroke-opacity", d => {
                 if (!path) return 0.8;
                 const s = d.source.id || d.source;
                 const t = d.target.id || d.target;
-                for (let i=0; i<path.length-1; i++) {
-                    if ((s === path[i] && t === path[i+1]) || (s === path[i+1] && t === path[i])) return 1;
+                for (let i = 0; i < path.length - 1; i++) {
+                    if ((s === path[i] && t === path[i + 1]) || (s === path[i + 1] && t === path[i])) return 1;
                 }
                 return 0.1;
             });
@@ -1716,17 +1623,17 @@ function initializeDashboard(graphData) {
             const adj = {};
             graphData.edges.forEach(e => {
                 const s = e.source.id || e.source; const t = e.target.id || e.target;
-                if(!adj[s]) adj[s] = []; if(!adj[t]) adj[t] = [];
+                if (!adj[s]) adj[s] = []; if (!adj[t]) adj[t] = [];
                 adj[s].push(t); adj[t].push(s);
             });
             const q = [[window.lastClickedNodeId, 0]];
             const visited = new Set([window.lastClickedNodeId]);
-            while(q.length > 0) {
+            while (q.length > 0) {
                 const [curr, depth] = q.shift();
                 allowedHops.add(curr);
                 if (depth < maxHops) {
-                    for(const n of (adj[curr] || [])) {
-                        if(!visited.has(n)) { visited.add(n); q.push([n, depth + 1]); }
+                    for (const n of (adj[curr] || [])) {
+                        if (!visited.has(n)) { visited.add(n); q.push([n, depth + 1]); }
                     }
                 }
             }
@@ -1810,12 +1717,12 @@ function initializeDashboard(graphData) {
 
         const d = new Date(pkt.time);
         const timeStr = `[${d.toTimeString().substring(0, 8)}.${d.getMilliseconds().toString().padStart(3, '0')}]`;
-        
+
         const dotColor = pkt.port === 'POSITION_APP' ? '#4caf50' : (pkt.port === 'TELEMETRY_APP' ? '#ff9800' : '#00bcd4');
 
         const div = document.createElement('div');
         div.className = 'term-line';
-        
+
         div.dataset.port = (pkt.port || '').toUpperCase();
         div.dataset.from = (pkt.from || '').toLowerCase();
         div.dataset.to = (pkt.to || '').toLowerCase();
@@ -2040,8 +1947,8 @@ function initializeDashboard(graphData) {
                         tc.classList.add('collapsed');
                         if (tt) tt.textContent = '▴';
                     }
-                    setTimeout(() => { 
-                        if (window.leafletMap) window.leafletMap.invalidateSize(); 
+                    setTimeout(() => {
+                        if (window.leafletMap) window.leafletMap.invalidateSize();
                         window.dispatchEvent(new Event('resize'));
                     }, 350);
                 }
