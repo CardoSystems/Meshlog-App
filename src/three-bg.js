@@ -287,7 +287,7 @@ export function initThreeBg() {
     var docHeight = $(document).height();
 
     window.WebFontConfig = {
-        google: { families: ['Inconsolata'] },
+        custom: { families: ['Inconsolata'] },
         active: function(){
             $("#options").css({
                 "visibility": "visible",

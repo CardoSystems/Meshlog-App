@@ -77,13 +77,13 @@ const renderRecentMaps = (recent) => {
     const top5 = recent.slice(0, 5);
     const others = recent.slice(5);
 
-    const top5Chips = top5.map(r => 
+    const top5Chips = top5.map(r =>
         `<a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" class="recent-map-chip" title="${r.id}">${escapeHTML(r.name || r.id)}</a>`
     ).join('');
 
     let othersHtml = '';
     if (others.length > 0) {
-        const othersItems = others.map(r => 
+        const othersItems = others.map(r =>
             `<a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" class="recent-map-dropdown-item" title="${r.id}">${escapeHTML(r.name || r.id)}</a>`
         ).join('');
 
@@ -2047,6 +2047,38 @@ function initializeDashboard(graphData) {
         }
     }
 
+    // ponytail: continuous loop cycle for ambient packet projectiles across both maps
+    if (window._ambientFlowInterval) clearInterval(window._ambientFlowInterval);
+    if (graphData.routePaths && graphData.routePaths.length > 0) {
+        window._ambientFlowInterval = setInterval(() => {
+            const speedControl = document.getElementById('speed-control');
+            const speedMultiplier = parseFloat(speedControl ? speedControl.value : 1) || 1;
+            if (speedMultiplier <= 0) return;
 
+            const path = graphData.routePaths[Math.floor(Math.random() * graphData.routePaths.length)];
+            if (!path || !path.hops || path.hops.length < 2) return;
+
+            const color = '#00bcd4'; // ambient cyan
+            
+            // Geo Map
+            const points = [];
+            path.hops.forEach(h => {
+                const m = markers[h.id];
+                if (m) points.push(m.getLatLng());
+            });
+            if (points.length > 1 && window.leafletMap) {
+                animateSinglePacket(points, color);
+            }
+            
+            // Logical Map (D3)
+            if (window.triggerD3Packet && window.d3Simulation) {
+                for (let i = 0; i < path.hops.length - 1; i++) {
+                    setTimeout(() => {
+                        window.triggerD3Packet(path.hops[i].id, path.hops[i+1].id, color);
+                    }, i * (500 / speedMultiplier));
+                }
+            }
+        }, 300); // 300ms ambient density
+    }
 
 } // End initializeDashboard
