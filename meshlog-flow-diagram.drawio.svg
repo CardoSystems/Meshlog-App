@@ -1,0 +1,414 @@
+<mxfile host="app.diagrams.net" modified="2026-08-07T01:29:00.000Z" agent="Meshlog" version="24.0.0" type="device">
+  <diagram id="meshlog-flow" name="Meshlog Webapp Flow">
+    <mxGraphModel dx="2800" dy="3200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="4000" pageHeight="5000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="&lt;b&gt;MESHLOG WEBAPP — FULL FLOW DIAGRAM&lt;/b&gt;" style="text;html=1;fontSize=22;fontColor=#FFFFFF;align=center;fillColor=#1a1a2e;rounded=1;strokeColor=#16213e;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="600" y="20" width="600" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="lane_client" value="&lt;b&gt;BROWSER / CLIENT&lt;/b&gt;" style="swimlane;startSize=30;fillColor=#1a1a2e;fontColor=#00bcd4;strokeColor=#16213e;rounded=1;fontSize=14;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="1700" height="2200" as="geometry"/>
+        </mxCell>
+        <mxCell id="start" value="User Opens App" style="ellipse;fillColor=#00bcd4;fontColor=#000;strokeColor=#006064;fontSize=13;fontStyle=1;fontFamily=Inter;" vertex="1" parent="lane_client">
+          <mxGeometry x="700" y="50" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="pwa_reg" value="Register Service Worker&#xa;(vite-plugin-pwa)&#xa;registerSW()" style="rounded=1;fillColor=#263238;fontColor=#b0bec5;strokeColor=#37474f;fontSize=11;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="200" y="50" width="200" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="pwa_update" value="New Version?&#xa;confirm() then updateSW(true)" style="rhombus;fillColor=#263238;fontColor=#ffc107;strokeColor=#37474f;fontSize=10;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="30" y="50" width="140" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="restore_prefs" value="Restore Native Preferences&#xa;(Capacitor to localStorage)" style="rounded=1;fillColor=#1b2838;fontColor=#8bc34a;strokeColor=#2e3d50;fontSize=11;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="620" y="140" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="init_three" value="initThreeBg()&#xa;3D Background + WebFont" style="rounded=1;fillColor=#1b2838;fontColor=#8bc34a;strokeColor=#2e3d50;fontSize=11;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="870" y="140" width="190" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="init_worker" value="worker = new ParserWorker()" style="rounded=1;fillColor=#1b2838;fontColor=#e91e63;strokeColor=#2e3d50;fontSize=11;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="640" y="210" width="220" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="broadcast_ch" value="BroadcastChannel('api-updates')&#xa;Listen for CACHE_UPDATED" style="rounded=1;fillColor=#263238;fontColor=#b0bec5;strokeColor=#37474f;fontSize=10;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="900" y="210" width="210" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="url_check" value="Read URL Params&#xa;?map= ?text=" style="rounded=1;fillColor=#1b2838;fontColor=#ffffff;strokeColor=#2e3d50;fontSize=12;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="650" y="280" width="200" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="dec_text" value="?text=&#xa;shared?" style="rhombus;fillColor=#1a237e;fontColor=#7c4dff;strokeColor=#283593;fontSize=11;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="400" y="270" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="ingest_text" value="Create File from text&#xa;then ingestFile()" style="rounded=1;fillColor=#263238;fontColor=#b0bec5;strokeColor=#37474f;fontSize=10;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="200" y="280" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="dec_map" value="?map=ID&#xa;present?" style="rhombus;fillColor=#1a237e;fontColor=#7c4dff;strokeColor=#283593;fontSize=12;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="680" y="360" width="140" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="check_idb_hist" value="Check IDB&#xa;history_{mapId}" style="rhombus;fillColor=#004d40;fontColor=#00e5ff;strokeColor=#00695c;fontSize=11;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="430" y="380" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="restore_local_hist" value="RESTORING LOCAL HISTORY&#xa;initializeDashboard(localGraph)" style="rounded=1;fillColor=#004d40;fontColor=#00e676;strokeColor=#00695c;fontSize=10;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="220" y="390" width="180" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="fetch_remote_map" value="worker.postMessage&#xa;cmd: start, id: mapId&#xa;Fetch from KV" style="rounded=1;fillColor=#b71c1c;fontColor=#ffffff;strokeColor=#c62828;fontSize=10;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="430" y="480" width="180" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="check_autosave" value="Check IDB&#xa;autoSave" style="rhombus;fillColor=#004d40;fontColor=#00e5ff;strokeColor=#00695c;fontSize=11;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="900" y="380" width="140" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="restore_autosave" value="RESTORING LOCAL SESSION&#xa;initializeDashboard(data)" style="rounded=1;fillColor=#004d40;fontColor=#00e676;strokeColor=#00695c;fontSize=10;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="1100" y="390" width="190" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="show_filepicker" value="Show File Picker UI&#xa;(Landing Page)" style="rounded=1;fillColor=#e65100;fontColor=#ffffff;strokeColor=#bf360c;fontSize=11;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="890" y="480" width="170" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="upload_header" value="&lt;b&gt;FILE UPLOAD FLOW&lt;/b&gt;" style="text;html=1;fontSize=14;fontColor=#ff9800;align=left;fontFamily=Inter;" vertex="1" parent="lane_client">
+          <mxGeometry x="30" y="570" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="upload_methods" value="Upload Methods:&#xa;1. File input change&#xa;2. Drag and Drop on body&#xa;3. Dashboard re-upload btn&#xa;4. PWA launchQueue&#xa;5. ?text= shared param" style="rounded=1;fillColor=#263238;fontColor=#ffcc80;strokeColor=#37474f;fontSize=11;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_client">
+          <mxGeometry x="30" y="600" width="200" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="get_turnstile" value="getTurnstileToken()&#xa;Cloudflare Turnstile CAPTCHA" style="rounded=1;fillColor=#1a237e;fontColor=#7c4dff;strokeColor=#283593;fontSize=11;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="270" y="610" width="210" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="send_parse_file" value="worker.postMessage&#xa;cmd: parse_file&#xa;file, token, origin" style="rounded=1;fillColor=#b71c1c;fontColor=#ffffff;strokeColor=#c62828;fontSize=11;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="270" y="680" width="200" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="worker_header" value="&lt;b&gt;PARSER WORKER (Web Worker)&lt;/b&gt;" style="text;html=1;fontSize=14;fontColor=#e91e63;align=left;fontFamily=Inter;" vertex="1" parent="lane_client">
+          <mxGeometry x="550" y="570" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="worker_recv" value="self.onmessage" style="rounded=1;fillColor=#880e4f;fontColor=#f8bbd0;strokeColor=#ad1457;fontSize=12;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="630" y="610" width="180" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="worker_cmd_dec" value="cmd?" style="rhombus;fillColor=#880e4f;fontColor=#f48fb1;strokeColor=#ad1457;fontSize=12;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="670" y="670" width="100" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="cmd_start" value="cmd: start&#xa;fetch /api/data?id=&#xa;Return graphData or NO_CACHE" style="rounded=1;fillColor=#4a148c;fontColor=#ce93d8;strokeColor=#6a1b9a;fontSize=10;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="540" y="760" width="200" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="cmd_parse" value="cmd: parse_file&#xa;Read file text" style="rounded=1;fillColor=#4a148c;fontColor=#ce93d8;strokeColor=#6a1b9a;fontSize=11;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="780" y="760" width="170" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="cmd_sync" value="cmd: sync&#xa;POST /api/cache&#xa;then SYNC_DONE" style="rounded=1;fillColor=#4a148c;fontColor=#ce93d8;strokeColor=#6a1b9a;fontSize=10;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="990" y="670" width="160" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="sha1_hash" value="SHA-1 Hash file text&#xa;8-char fileHash" style="rounded=1;fillColor=#311b92;fontColor=#b388ff;strokeColor=#4527a0;fontSize=11;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="780" y="830" width="180" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="dup_check" value="Duplicate?&#xa;fetch /api/data?id={hash}" style="rhombus;fillColor=#e65100;fontColor=#ffffff;strokeColor=#bf360c;fontSize=10;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="780" y="900" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="dup_yes" value="Duplicate Found&#xa;Return existing graphData&#xa;isDuplicate: true&#xa;(No prompt shown)" style="rounded=1;fillColor=#e65100;fontColor=#fff9c4;strokeColor=#bf360c;fontSize=10;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="590" y="905" width="170" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="dup_no_parse" value="Parse Meshtastic Log&#xa;Extract: nodes, edges,&#xa;routePaths, packetLog,&#xa;hopStats, telemetry" style="rounded=1;fillColor=#1b5e20;fontColor=#a5d6a7;strokeColor=#2e7d32;fontSize=11;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="780" y="1000" width="200" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="time_interp" value="Atomic Time Interpolation&#xa;Fill gaps between timestamps" style="rounded=1;fillColor=#1b5e20;fontColor=#a5d6a7;strokeColor=#2e7d32;fontSize=10;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="780" y="1090" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="cache_to_server" value="POST /api/cache&#xa;graph + fileHash + token&#xa;Get shareId and shortUrl" style="rounded=1;fillColor=#b71c1c;fontColor=#ffffff;strokeColor=#c62828;fontSize=10;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="780" y="1150" width="200" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="offline_fallback" value="Offline?&#xa;shareId = local_xxx&#xa;pendingSync: true" style="rhombus;fillColor=#e65100;fontColor=#ffffff;strokeColor=#bf360c;fontSize=10;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="580" y="1150" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="post_done" value="postMessage&#xa;type: DONE&#xa;graphData, shareId" style="rounded=1;fillColor=#880e4f;fontColor=#f8bbd0;strokeColor=#ad1457;fontSize=11;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="680" y="1250" width="180" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="onmsg_header" value="&lt;b&gt;worker.onmessage HANDLER&lt;/b&gt;" style="text;html=1;fontSize=14;fontColor=#7c4dff;align=left;fontFamily=Inter;" vertex="1" parent="lane_client">
+          <mxGeometry x="30" y="1250" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="onmsg_done" value="type === DONE" style="rounded=1;fillColor=#1a237e;fontColor=#7c4dff;strokeColor=#283593;fontSize=12;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="50" y="1290" width="180" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="dup_check_ui" value="isDuplicate?" style="rhombus;fillColor=#e65100;fontColor=#ffffff;strokeColor=#bf360c;fontSize=11;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="75" y="1350" width="130" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="show_dup_toast" value="Show Duplicate Toast&#xa;Redirected to original" style="rounded=1;fillColor=#e65100;fontColor=#fff9c4;strokeColor=#bf360c;fontSize=10;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="240" y="1350" width="180" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="prompt_name" value="NOT duplicate:&#xa;prompt Name this map" style="rounded=1;fillColor=#004d40;fontColor=#00e676;strokeColor=#00695c;fontSize=10;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="50" y="1440" width="180" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="save_history" value="idb.set(history_{shareId})&#xa;localStorage recentMaps&#xa;Preferences.set recentMaps&#xa;clipboard.writeText(shortUrl)" style="rounded=1;fillColor=#1b2838;fontColor=#8bc34a;strokeColor=#2e3d50;fontSize=10;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="50" y="1510" width="210" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="call_init_dash" value="initializeDashboard(graphData)" style="rounded=1;fillColor=#00695c;fontColor=#ffffff;strokeColor=#004d40;fontSize=13;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="350" y="1520" width="280" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="dash_header" value="&lt;b&gt;initializeDashboard(graphData)&lt;/b&gt;" style="text;html=1;fontSize=16;fontColor=#00e676;align=center;fontFamily=Inter;" vertex="1" parent="lane_client">
+          <mxGeometry x="400" y="1600" width="400" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="autosave_write" value="idb.set autoSave graphData&#xa;Persist for crash/refresh" style="rounded=1;fillColor=#004d40;fontColor=#00e676;strokeColor=#00695c;fontSize=10;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="30" y="1650" width="200" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="recent_update" value="Update recentMaps&#xa;localStorage + Preferences" style="rounded=1;fillColor=#263238;fontColor=#b0bec5;strokeColor=#37474f;fontSize=10;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="260" y="1650" width="180" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="view_toggle" value="View Toggle Buttons&#xa;Map | Network | Links" style="rounded=1;fillColor=#1a237e;fontColor=#7c4dff;strokeColor=#283593;fontSize=11;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="470" y="1650" width="180" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="viz_header" value="&lt;b&gt;VISUALIZATION LAYERS&lt;/b&gt;" style="text;html=1;fontSize=14;fontColor=#2196f3;align=center;fontFamily=Inter;" vertex="1" parent="lane_client">
+          <mxGeometry x="350" y="1720" width="500" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="geo_map" value="&lt;b&gt;GEO MAP (Leaflet)&lt;/b&gt;&#xa;---&#xa;Tile Layers (Dark, Satellite, Topo)&#xa;Marker Clusters&#xa;Route Polylines (SNR colored)&#xa;Precision Circles&#xa;Node Popups (telemetry charts)&#xa;animateSinglePacket()" style="rounded=1;fillColor=#0d47a1;fontColor=#bbdefb;strokeColor=#1565c0;fontSize=10;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_client">
+          <mxGeometry x="30" y="1770" width="250" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="d3_map" value="&lt;b&gt;LOGICAL NETWORK (D3)&lt;/b&gt;&#xa;---&#xa;Force Simulation&#xa;Nodes (circle, sized by traffic)&#xa;Links (colored by SNR)&#xa;Drag interaction&#xa;Path highlight (click 2 nodes)&#xa;triggerD3Packet()" style="rounded=1;fillColor=#4a148c;fontColor=#e1bee7;strokeColor=#6a1b9a;fontSize=10;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_client">
+          <mxGeometry x="320" y="1770" width="240" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="terminal" value="&lt;b&gt;TERMINAL TIMELINE&lt;/b&gt;&#xa;---&#xa;Chronological packet replay&#xa;Speed control slider&#xa;Node and port filters&#xa;Color-coded by packet type&#xa;Triggers packet animations&#xa;on both Geo and D3 maps&#xa;pulseLeaflet() / pulseD3()" style="rounded=1;fillColor=#bf360c;fontColor=#ffccbc;strokeColor=#d84315;fontSize=10;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_client">
+          <mxGeometry x="600" y="1770" width="230" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="sidebar" value="&lt;b&gt;SIDEBAR&lt;/b&gt;&#xa;---&#xa;Longest Links table&#xa;Hop Statistics&#xa;Unmapped Nodes list" style="rounded=1;fillColor=#263238;fontColor=#b0bec5;strokeColor=#37474f;fontSize=10;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_client">
+          <mxGeometry x="870" y="1770" width="190" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="ambient_flow" value="&lt;b&gt;AMBIENT PACKET FLOW LOOP&lt;/b&gt;&#xa;---&#xa;setInterval(300ms)&#xa;Pick random routePath&#xa;Geo: animateSinglePacket(cyan)&#xa;D3: triggerD3Packet(cyan)&#xa;Respects speed control&#xa;Continuous loop cycle" style="rounded=1;fillColor=#006064;fontColor=#80deea;strokeColor=#00838f;fontSize=11;fontFamily=Inter;whiteSpace=wrap;align=left;fontStyle=1;" vertex="1" parent="lane_client">
+          <mxGeometry x="30" y="1950" width="270" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="offline_header" value="&lt;b&gt;OFFLINE / SYNC FLOW&lt;/b&gt;" style="text;html=1;fontSize=14;fontColor=#ffc107;align=left;fontFamily=Inter;" vertex="1" parent="lane_client">
+          <mxGeometry x="850" y="1940" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="offline_check" value="navigator.onLine?" style="rhombus;fillColor=#e65100;fontColor=#ffffff;strokeColor=#bf360c;fontSize=11;fontFamily=Inter;whiteSpace=wrap;" vertex="1" parent="lane_client">
+          <mxGeometry x="900" y="1980" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="offline_mode" value="Offline:&#xa;Disable share btn&#xa;Show offline banner&#xa;Force dark map tiles&#xa;Queue sync to IDB" style="rounded=1;fillColor=#263238;fontColor=#ffc107;strokeColor=#37474f;fontSize=10;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_client">
+          <mxGeometry x="1100" y="1970" width="170" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="online_sync" value="Online:&#xa;Check syncQueue in IDB&#xa;POST /api/cache pending&#xa;Clear syncQueue" style="rounded=1;fillColor=#1b5e20;fontColor=#a5d6a7;strokeColor=#2e7d32;fontSize=10;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_client">
+          <mxGeometry x="1100" y="2080" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="settings" value="&lt;b&gt;SETTINGS AND TOUR&lt;/b&gt;&#xa;---&#xa;D3 Spread slider&#xa;Speed control&#xa;Theme toggle&#xa;Tutorial overlay&#xa;Export/share" style="rounded=1;fillColor=#263238;fontColor=#b0bec5;strokeColor=#37474f;fontSize=10;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_client">
+          <mxGeometry x="350" y="1950" width="170" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="share_flow" value="&lt;b&gt;SHARE FLOW&lt;/b&gt;&#xa;---&#xa;1. copyShareLink()&#xa;2. Build URL ?map=ID&#xa;3. Copy to clipboard&#xa;4. Toast confirmation" style="rounded=1;fillColor=#263238;fontColor=#00e5ff;strokeColor=#37474f;fontSize=10;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_client">
+          <mxGeometry x="560" y="1950" width="210" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" edge="1" source="start" target="restore_prefs" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1b" edge="1" source="start" target="init_three" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1c" edge="1" source="start" target="pwa_reg" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_pwa" edge="1" source="pwa_reg" target="pwa_update" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" edge="1" source="restore_prefs" target="init_worker" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2b" edge="1" source="init_worker" target="broadcast_ch" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" edge="1" source="init_worker" target="url_check" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" edge="1" source="url_check" target="dec_text" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4b" value="Yes" style="fontColor=#4caf50;fontSize=10;fontFamily=Inter;" edge="1" source="dec_text" target="ingest_text" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" edge="1" source="url_check" target="dec_map" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" value="Yes" style="fontColor=#4caf50;fontSize=10;fontFamily=Inter;" edge="1" source="dec_map" target="check_idb_hist" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7" value="Found" style="fontColor=#00e676;fontSize=10;fontFamily=Inter;" edge="1" source="check_idb_hist" target="restore_local_hist" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" value="Not found" style="fontColor=#f44336;fontSize=10;fontFamily=Inter;" edge="1" source="check_idb_hist" target="fetch_remote_map" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9" value="No" style="fontColor=#f44336;fontSize=10;fontFamily=Inter;" edge="1" source="dec_map" target="check_autosave" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" value="Found" style="fontColor=#00e676;fontSize=10;fontFamily=Inter;" edge="1" source="check_autosave" target="restore_autosave" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e11" value="Empty" style="fontColor=#f44336;fontSize=10;fontFamily=Inter;" edge="1" source="check_autosave" target="show_filepicker" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e12" edge="1" source="upload_methods" target="get_turnstile" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e13" edge="1" source="get_turnstile" target="send_parse_file" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e14" edge="1" source="send_parse_file" target="worker_recv" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e15" edge="1" source="worker_recv" target="worker_cmd_dec" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e16" value="start" style="fontColor=#ce93d8;fontSize=10;fontFamily=Inter;" edge="1" source="worker_cmd_dec" target="cmd_start" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e17" value="parse_file" style="fontColor=#ce93d8;fontSize=10;fontFamily=Inter;" edge="1" source="worker_cmd_dec" target="cmd_parse" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e17b" value="sync" style="fontColor=#ce93d8;fontSize=10;fontFamily=Inter;" edge="1" source="worker_cmd_dec" target="cmd_sync" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e18" edge="1" source="cmd_parse" target="sha1_hash" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e19" edge="1" source="sha1_hash" target="dup_check" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e20" value="Yes" style="fontColor=#ffc107;fontSize=10;fontFamily=Inter;" edge="1" source="dup_check" target="dup_yes" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e21" value="No" style="fontColor=#4caf50;fontSize=10;fontFamily=Inter;" edge="1" source="dup_check" target="dup_no_parse" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e22" edge="1" source="dup_no_parse" target="time_interp" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e23" edge="1" source="time_interp" target="cache_to_server" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e23b" value="Failed" style="fontColor=#ffc107;fontSize=10;fontFamily=Inter;" edge="1" source="cache_to_server" target="offline_fallback" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e24" edge="1" source="cache_to_server" target="post_done" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e24b" edge="1" source="offline_fallback" target="post_done" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e24c" edge="1" source="dup_yes" target="post_done" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e25" edge="1" source="post_done" target="onmsg_done" parent="lane_client">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="400" y="1275"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e26" edge="1" source="onmsg_done" target="dup_check_ui" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e27" value="Yes" style="fontColor=#ffc107;fontSize=10;fontFamily=Inter;" edge="1" source="dup_check_ui" target="show_dup_toast" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e28" value="No" style="fontColor=#4caf50;fontSize=10;fontFamily=Inter;" edge="1" source="dup_check_ui" target="prompt_name" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e29" edge="1" source="prompt_name" target="save_history" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e30" edge="1" source="save_history" target="call_init_dash" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e30b" edge="1" source="show_dup_toast" target="call_init_dash" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e31" edge="1" source="call_init_dash" target="autosave_write" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e31b" edge="1" source="call_init_dash" target="recent_update" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e31c" edge="1" source="call_init_dash" target="view_toggle" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e32" edge="1" source="view_toggle" target="geo_map" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e33" edge="1" source="view_toggle" target="d3_map" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e34" edge="1" source="view_toggle" target="terminal" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e34b" edge="1" source="view_toggle" target="sidebar" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e35" style="strokeColor=#00bcd4;strokeWidth=2;dashed=1;" edge="1" source="geo_map" target="ambient_flow" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e36" style="strokeColor=#00bcd4;strokeWidth=2;dashed=1;" edge="1" source="d3_map" target="ambient_flow" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e37" value="Offline" style="fontColor=#ffc107;fontSize=10;fontFamily=Inter;" edge="1" source="offline_check" target="offline_mode" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e38" value="Online" style="fontColor=#4caf50;fontSize=10;fontFamily=Inter;" edge="1" source="offline_check" target="online_sync" parent="lane_client">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_restore1" style="strokeColor=#00e676;dashed=1;" edge="1" source="restore_local_hist" target="call_init_dash" parent="lane_client">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="140" y="1540"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_restore2" style="strokeColor=#00e676;dashed=1;" edge="1" source="restore_autosave" target="call_init_dash" parent="lane_client">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1195" y="1540"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lane_edge" value="&lt;b&gt;CLOUDFLARE EDGE (Worker + KV)&lt;/b&gt;" style="swimlane;startSize=30;fillColor=#0d1117;fontColor=#ff6d00;strokeColor=#16213e;rounded=1;fontSize=14;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1800" y="90" width="450" height="1100" as="geometry"/>
+        </mxCell>
+        <mxCell id="cf_worker" value="&lt;b&gt;src/worker.js&lt;/b&gt;&#xa;Cloudflare Workers Runtime" style="rounded=1;fillColor=#e65100;fontColor=#ffffff;strokeColor=#bf360c;fontSize=12;fontFamily=Inter;whiteSpace=wrap;fontStyle=1;" vertex="1" parent="lane_edge">
+          <mxGeometry x="100" y="50" width="250" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="api_data" value="GET /api/data?id=&#xa;---&#xa;Lookup KV: map_{id}&#xa;Return JSON or 404&#xa;Cache-Control: no-cache" style="rounded=1;fillColor=#1b2838;fontColor=#64b5f6;strokeColor=#2e3d50;fontSize=11;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_edge">
+          <mxGeometry x="30" y="130" width="200" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="api_cache" value="POST /api/cache&#xa;---&#xa;1. Verify Turnstile token&#xa;   (action + hostname check)&#xa;2. Size limit: 25 MiB&#xa;3. Skip KV write if exists&#xa;4. Put map_{id} to KV&#xa;5. Return { id, shortUrl }" style="rounded=1;fillColor=#1b2838;fontColor=#64b5f6;strokeColor=#2e3d50;fontSize=11;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_edge">
+          <mxGeometry x="30" y="260" width="220" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="kv_store" value="&lt;b&gt;KV: mesh_logger&lt;/b&gt;&#xa;---&#xa;map_{hash} = graphData JSON&#xa;parsed_graph = demo data&#xa;&#xa;Max 25 MiB per key" style="rounded=1;fillColor=#311b92;fontColor=#b388ff;strokeColor=#4527a0;fontSize=11;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_edge">
+          <mxGeometry x="30" y="450" width="230" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="turnstile" value="&lt;b&gt;Turnstile Verification&lt;/b&gt;&#xa;---&#xa;challenges.cloudflare.com&#xa;action: turnstile-spin-v1&#xa;hostname whitelist:&#xa;  meshlog.camal.eu&#xa;  localhost / 127.0.0.1&#xa;  mesh-log-mapper.xperia.workers.dev" style="rounded=1;fillColor=#880e4f;fontColor=#f8bbd0;strokeColor=#ad1457;fontSize=10;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_edge">
+          <mxGeometry x="30" y="600" width="280" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="html_rewriter" value="&lt;b&gt;HTMLRewriter&lt;/b&gt;&#xa;---&#xa;Inject Cloudflare Web Analytics&#xa;beacon.min.js on every HTML page" style="rounded=1;fillColor=#263238;fontColor=#b0bec5;strokeColor=#37474f;fontSize=10;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_edge">
+          <mxGeometry x="30" y="780" width="240" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="static_assets" value="&lt;b&gt;Static Assets (env.ASSETS)&lt;/b&gt;&#xa;---&#xa;dist/ Vite build output&#xa;71 files total&#xa;run_worker_first: /, /index.html, /api/*" style="rounded=1;fillColor=#263238;fontColor=#b0bec5;strokeColor=#37474f;fontSize=10;fontFamily=Inter;whiteSpace=wrap;align=left;" vertex="1" parent="lane_edge">
+          <mxGeometry x="30" y="900" width="280" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="ce1" edge="1" source="cf_worker" target="api_data" parent="lane_edge">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ce2" edge="1" source="cf_worker" target="api_cache" parent="lane_edge">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ce3" edge="1" source="api_data" target="kv_store" parent="lane_edge">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ce4" edge="1" source="api_cache" target="kv_store" parent="lane_edge">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ce5" edge="1" source="api_cache" target="turnstile" parent="lane_edge">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ce6" edge="1" source="cf_worker" target="html_rewriter" parent="lane_edge">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="820"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce7" edge="1" source="cf_worker" target="static_assets" parent="lane_edge">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="400" y="940"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

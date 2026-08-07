@@ -7,7 +7,7 @@
 ---
 
 <div align="center">
-  <img src="canvas.png" alt="Meshlog Architecture Diagram" width="800">
+  <img src="meshlog-flow-diagram.drawio.svg" alt="Meshlog Full Flow Diagram" width="800">
 </div>
 
 ---
