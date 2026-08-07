@@ -7,7 +7,7 @@
 ---
 
 <div align="center">
-  <img src="meshlog-flow-diagram.drawio.png" alt="Meshlog Full Flow Diagram" width="800">
+  <img src="untitled.png" alt="home" width="1080">
 </div>
 
 ---
@@ -35,6 +35,10 @@
 This project is licensed under the **PolyForm Noncommercial License 1.0.0**. 
 
 You are permitted to view, fork, and modify the software for personal, academic, or hobbyist purposes. **Commercial use** of this software, its derivatives, or its output is strictly prohibited. For complete legal terms, refer to the `LICENSE` file included in the repository.
+
+<div align="center">
+  <img src="meshlog-flow-diagram.drawio.png" alt="Meshlog Full Flow Diagram" width="800">
+</div>
 
 ## © Copyright
 
