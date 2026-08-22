@@ -1,5 +1,9 @@
 /*
-Required Notice: Copyright (c) 2026 CardoSystems
+Copyright (c) 2026 CardoSystems
+
+# PolyForm Noncommercial License 1.0.0
+
+<https://polyformproject.org/licenses/noncommercial/1.0.0>
 */
 import { registerSW } from 'virtual:pwa-register';
 import { initThreeBg, disposeThreeBg } from './src/three-bg.js';
@@ -64,6 +68,88 @@ const idb = {
 };
 const escapeHTML = str => String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
 
+let lastDeletedMap = null;
+let undoToastTimeout = null;
+
+window.deleteRecentMap = async (id, name, event) => {
+    if (event) event.stopPropagation();
+    
+    // Warning confirmation
+    const mapLabel = name || id;
+    if (!window.confirm(`Delete "${mapLabel}" from My Maps?\n\nThis only removes your local saved link and cached data.`)) {
+        return;
+    }
+
+    let recent = JSON.parse(localStorage.getItem('recentMaps') || '[]');
+    recent = recent.map(r => typeof r === 'string' ? { id: r, name: r } : r);
+    
+    const index = recent.findIndex(r => r.id === id);
+    if (index === -1) return;
+
+    const removedItem = recent[index];
+    const cachedData = await idb.get(`history_${id}`);
+
+    // Remove locally
+    recent.splice(index, 1);
+    localStorage.setItem('recentMaps', JSON.stringify(recent));
+    Preferences.set({ key: 'recentMaps', value: JSON.stringify(recent) });
+    await idb.set(`history_${id}`, null);
+
+    // Save for undo
+    lastDeletedMap = { item: removedItem, index, data: cachedData };
+
+    renderRecentMaps(recent);
+    showUndoToast(removedItem.name || removedItem.id);
+};
+
+window.undoDeleteMap = async () => {
+    if (!lastDeletedMap) return;
+
+    const { item, index, data } = lastDeletedMap;
+    lastDeletedMap = null;
+
+    let recent = JSON.parse(localStorage.getItem('recentMaps') || '[]');
+    recent = recent.map(r => typeof r === 'string' ? { id: r, name: r } : r);
+
+    // Re-insert at original index
+    recent.splice(Math.min(index, recent.length), 0, item);
+    localStorage.setItem('recentMaps', JSON.stringify(recent));
+    Preferences.set({ key: 'recentMaps', value: JSON.stringify(recent) });
+
+    if (data) {
+        await idb.set(`history_${item.id}`, data);
+    }
+
+    renderRecentMaps(recent);
+    hideUndoToast();
+};
+
+function showUndoToast(mapName) {
+    let toast = document.getElementById('map-undo-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'map-undo-toast';
+        toast.className = 'map-undo-toast';
+        document.body.appendChild(toast);
+    }
+
+    toast.innerHTML = `
+        <span>Deleted <strong>${escapeHTML(mapName)}</strong></span>
+        <button onclick="window.undoDeleteMap()">Undo ↩</button>
+    `;
+
+    toast.classList.add('show');
+
+    if (undoToastTimeout) clearTimeout(undoToastTimeout);
+    undoToastTimeout = setTimeout(() => hideUndoToast(), 5000);
+}
+
+function hideUndoToast() {
+    const toast = document.getElementById('map-undo-toast');
+    if (toast) toast.classList.remove('show');
+    if (undoToastTimeout) clearTimeout(undoToastTimeout);
+}
+
 const renderRecentMaps = (recent) => {
     if (!recent || recent.length === 0) {
         const emptyHtml = `<span style="color:#666;font-size:12px;">No cached maps yet.</span>`;
@@ -77,15 +163,23 @@ const renderRecentMaps = (recent) => {
     const top5 = recent.slice(0, 5);
     const others = recent.slice(5);
 
-    const top5Chips = top5.map(r =>
-        `<a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" class="recent-map-chip" title="${r.id}">${escapeHTML(r.name || r.id)}</a>`
-    ).join('');
+    const top5Chips = top5.map(r => `
+        <span class="recent-map-chip-wrapper">
+            <a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" class="recent-map-chip" title="${r.id}">
+                ${escapeHTML(r.name || r.id)}
+            </a>
+            <button type="button" class="recent-map-del-btn" title="Delete map" onclick="window.deleteRecentMap('${r.id}', '${escapeHTML(r.name || r.id)}', event)">✕</button>
+        </span>
+    `).join('');
 
     let othersHtml = '';
     if (others.length > 0) {
-        const othersItems = others.map(r =>
-            `<a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" class="recent-map-dropdown-item" title="${r.id}">${escapeHTML(r.name || r.id)}</a>`
-        ).join('');
+        const othersItems = others.map(r => `
+            <div class="recent-map-dropdown-row">
+                <a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" class="recent-map-dropdown-item" title="${r.id}">${escapeHTML(r.name || r.id)}</a>
+                <button type="button" class="recent-map-del-btn dropdown-del" title="Delete map" onclick="window.deleteRecentMap('${r.id}', '${escapeHTML(r.name || r.id)}', event)">✕</button>
+            </div>
+        `).join('');
 
         othersHtml = `
             <div class="recent-maps-others-container">
@@ -1265,8 +1359,8 @@ function initializeDashboard(graphData) {
         if (countEl) countEl.textContent = graphData.longestLinks.length;
         if (totalEl) totalEl.textContent = graphData.longestLinks.length;
 
-        if (graphData.longestLinks.length > 0 && longestEl) {
-            longestEl.textContent = graphData.longestLinks[0].distanceKm.toFixed(2) + ' km';
+        if (longestEl) {
+            longestEl.textContent = graphData.longestLinks.length > 0 ? (graphData.longestLinks[0].distanceKm.toFixed(2) + ' km') : '0.00 km';
         }
 
         graphData.longestLinks.forEach((link, idx) => {

@@ -196,60 +196,81 @@ self.onmessage = async function(e) {
             }
         }
         else if (packet.portnum === 'TRACEROUTE_APP' && p.includes('Route traced')) {
-            const hops = [];
-            let currentHop = null;
+            const isPacketMqtt = !!packet.via_mqtt;
+            // Split into separate route legs (toward destination vs back to us)
+            const routeSections = p.split(/Route traced (?:toward destination|back to us):/i);
             
-            for (const line of p.split('\n')) {
-                const idMatch = line.match(/!([0-9a-f]+)/);
-                if (idMatch) {
-                    if (currentHop) hops.push(currentHop);
-                    currentHop = { id: "!" + idMatch[1], snr: null };
-                } else if (line.includes('dB') && currentHop) {
-                    // Format: "⇊ -14.5 dB" or "⇊ ? dB"
-                    if (line.includes('?')) {
-                        currentHop.snr = null;
-                    } else {
-                        const snrMatch = line.match(/([-\d.]+)\s*dB/);
-                        if (snrMatch) {
-                            currentHop.snr = parseFloat(snrMatch[1]);
+            for (const section of routeSections) {
+                if (!section.trim()) continue;
+                const hops = [];
+                let currentHop = null;
+                
+                for (const line of section.split('\n')) {
+                    const idMatch = line.match(/!([0-9a-f]+)/i);
+                    if (idMatch) {
+                        if (currentHop) hops.push(currentHop);
+                        currentHop = { id: "!" + idMatch[1].toLowerCase(), snr: null };
+                    } else if (line.includes('dB') && currentHop) {
+                        // Format: "⇊ -14.5 dB" or "⇊ ? dB"
+                        if (line.includes('?')) {
+                            currentHop.snr = null;
+                        } else {
+                            const snrMatch = line.match(/([-\d.]+)\s*dB/);
+                            if (snrMatch) {
+                                currentHop.snr = parseFloat(snrMatch[1]);
+                            }
                         }
                     }
                 }
-            }
-            if (currentHop) hops.push(currentHop);
-            
-            const validHops = hops.filter(h => h.id !== '!ffffffff' && h.id !== '!-1');
-            
-            if (validHops.length > 1) {
-                validHops.forEach(h => {
-                    const n = getNode(h.id);
-                    n.has_rf_link = true;
-                });
-                routePaths.push({
-                    from: packet.from,
-                    hops: validHops
-                });
-                logEntry.hops = validHops; // Attach hops to terminal feed for animation
-
-                const numHops = validHops.length - 1;
-                if (numHops === 1) hopStats.hop1++;
-                else if (numHops === 2) hopStats.hop2++;
-                else if (numHops >= 3) hopStats.hop3Plus++;
-                hopStats.total++;
+                if (currentHop) hops.push(currentHop);
                 
-                for (let i = 0; i < validHops.length - 1; i++) {
-                    const source = validHops[i].id;
-                    const target = validHops[i+1].id;
-                    const snr = validHops[i+1].snr;
-                    
-                    if (source === target) continue;
-                    
-                    const key = source < target ? `${source}-${target}` : `${target}-${source}`;
-                    if (!linkMap.has(key)) {
-                        linkMap.set(key, { source, target, snrs: [] });
+                const validHops = hops.filter(h => h.id !== '!ffffffff' && h.id !== '!-1');
+                
+                if (validHops.length > 1) {
+                    if (!isPacketMqtt) {
+                        validHops.forEach(h => {
+                            const n = getNode(h.id);
+                            n.has_rf_link = true;
+                        });
+                        const numHops = validHops.length - 1;
+                        if (numHops === 1) hopStats.hop1++;
+                        else if (numHops === 2) hopStats.hop2++;
+                        else if (numHops >= 3) hopStats.hop3Plus++;
+                        hopStats.total++;
                     }
-                    if (snr !== null && snr !== '?') {
-                        linkMap.get(key).snrs.push(snr);
+                    
+                    routePaths.push({
+                        from: packet.from,
+                        hops: validHops,
+                        via_mqtt: isPacketMqtt
+                    });
+                    logEntry.hops = validHops; // Attach hops to terminal feed for animation
+                    
+                    for (let i = 0; i < validHops.length - 1; i++) {
+                        const source = validHops[i].id;
+                        const target = validHops[i+1].id;
+                        const snr = validHops[i].snr;
+                        
+                        if (source === target) continue;
+                        
+                        const key = source < target ? `${source}-${target}` : `${target}-${source}`;
+                        if (!linkMap.has(key)) {
+                            linkMap.set(key, { 
+                                source, 
+                                target, 
+                                snrs: [], 
+                                rf_count: 0, 
+                                mqtt_count: 0 
+                            });
+                        }
+                        const link = linkMap.get(key);
+                        const isRfHop = !isPacketMqtt && snr !== null && !isNaN(snr);
+                        if (isRfHop) {
+                            link.snrs.push(snr);
+                            link.rf_count++;
+                        } else {
+                            link.mqtt_count++;
+                        }
                     }
                 }
             }
@@ -276,10 +297,11 @@ self.onmessage = async function(e) {
                 const fromMatch = line.match(/from=(-?\d+)/);
                 const toMatch = line.match(/to=(-?\d+)/);
                 const mqttMatch = line.match(/via_mqtt=(true|false)/);
+                const isMqtt = (mqttMatch && mqttMatch[1] === 'true') || line.includes('TRANSPORT_MQTT') || line.includes('via_mqtt=true');
                 currentPacket = {
                     from: fromMatch ? toHexId(parseInt(fromMatch[1], 10)) : null,
                     to: toMatch ? toHexId(parseInt(toMatch[1], 10)) : null,
-                    via_mqtt: mqttMatch ? mqttMatch[1] === 'true' : false,
+                    via_mqtt: isMqtt,
                     portnum: null,
                     payload: ""
                 };
@@ -310,9 +332,11 @@ self.onmessage = async function(e) {
                     payloadBody += ` time=${Math.floor(rcvTime/1000)}`;
                 }
                 
+                const isSingleMqtt = line.includes('via_mqtt=true') || line.includes('TRANSPORT_MQTT') || line.includes('[MQTT]');
                 processPacket({
                     from: hexId,
                     to: null,
+                    via_mqtt: isSingleMqtt,
                     portnum: portnum,
                     payload: payloadType + payloadBody
                 });
@@ -345,7 +369,7 @@ self.onmessage = async function(e) {
         }
 
         const hasMqtt = (node.mqtt_packets_count || 0) > 0;
-        const hasRf = (node.rf_packets_count || 0) > 0 || !!node.has_rf_link;
+        const hasRf = (node.rf_packets_count || 0) > 0 || (node.has_rf_link && !node.via_mqtt);
         if (hasMqtt && hasRf) {
             node.transport_type = 'HYBRID';
             node.via_mqtt = false;
@@ -363,7 +387,14 @@ self.onmessage = async function(e) {
           if (link.snrs.length > 0) {
               avgSnr = link.snrs.reduce((a, b) => a + b, 0) / link.snrs.length;
           }
-          return { source: link.source, target: link.target, snr: avgSnr };
+          return { 
+              source: link.source, 
+              target: link.target, 
+              snr: avgSnr,
+              is_rf: link.rf_count > 0,
+              rf_count: link.rf_count,
+              mqtt_count: link.mqtt_count
+          };
       });
 
       const longestLinks = [];
@@ -373,7 +404,17 @@ self.onmessage = async function(e) {
           if (src && tgt && src.lat !== undefined && tgt.lat !== undefined) {
               const dist = getDistanceKm(src.lat, src.lon, tgt.lat, tgt.lon);
               edge.distanceKm = dist;
-              if (dist > 0) {
+              
+              // Pure RF Direct/Traced Link Criteria:
+              // 1) Link MUST have verified direct RF traceroute reception (rf_count > 0)
+              // 2) Link MUST have valid numeric RF SNR (snr !== null)
+              // 3) Neither endpoint can be an MQTT-only node (transport_type !== 'MQTT')
+              // 4) Both endpoints must have verified direct RF packet transmissions (rf_packets_count > 0)
+              const hasRfPackets = (src.rf_packets_count || 0) > 0 && (tgt.rf_packets_count || 0) > 0;
+              const notMqttOnly = src.transport_type !== 'MQTT' && tgt.transport_type !== 'MQTT';
+              const isPureRfLink = edge.is_rf && edge.rf_count > 0 && edge.snr !== null && notMqttOnly && hasRfPackets;
+              
+              if (dist > 0 && isPureRfLink) {
                   longestLinks.push({
                       source: src.id,
                       target: tgt.id,
