@@ -201,6 +201,50 @@ const renderRecentMaps = (recent) => {
     });
 };
 
+const renderCommunityMaps = (maps) => {
+    let contentHtml = '';
+    if (!maps || maps.length === 0) {
+        contentHtml = `
+            <div class="recent-maps-top5">
+                <span class="recent-map-chip-wrapper">
+                    <a href="javascript:void(0)" onclick="window.loadMap('demo')" class="recent-map-chip community-chip" title="Explore the default demo map">
+                        🌐 Demo Network <span class="chip-count">(sample)</span>
+                    </a>
+                </span>
+            </div>
+        `;
+    } else {
+        const chips = maps.slice(0, 6).map(m => `
+            <span class="recent-map-chip-wrapper">
+                <a href="javascript:void(0)" onclick="window.loadMap('${m.id}')" class="recent-map-chip community-chip" title="${escapeHTML(m.name || m.id)}">
+                    🌐 ${escapeHTML(m.name || m.id)}${m.nodesCount ? `<span class="chip-count">(${m.nodesCount} nodes)</span>` : ''}
+                </a>
+            </span>
+        `).join('');
+        contentHtml = `<div class="recent-maps-top5">${chips}</div>`;
+    }
+
+    ['recent-community-maps', 'landing-community-maps'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = contentHtml;
+    });
+};
+
+const fetchCommunityMaps = async () => {
+    try {
+        const origin = (window.location.hostname === 'localhost' ? 'https://meshlog.camal.eu' : window.location.origin);
+        const res = await fetch(origin + '/api/community_maps');
+        if (res.ok) {
+            const list = await res.json();
+            renderCommunityMaps(Array.isArray(list) ? list : []);
+        } else {
+            renderCommunityMaps([]);
+        }
+    } catch (e) {
+        renderCommunityMaps([]);
+    }
+};
+
 window.goHome = async () => {
     await idb.set('autoSave', null);
     window.location.href = window.location.pathname;
@@ -388,6 +432,7 @@ window.addEventListener('load', async () => {
         Preferences.set({ key: 'recentMaps', value: JSON.stringify(recent) });
     }
     renderRecentMaps(recent);
+    fetchCommunityMaps();
 
     if (mapId) {
         document.getElementById('loading-text').innerText = "DOWNLOADING SHARED MAP...";

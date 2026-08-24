@@ -18,32 +18,84 @@ export default {
       return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
     }
 
+    if (url.pathname === "/api/community_maps") {
+      const list = await kv.get("community_maps");
+      return new Response(list || "[]", {
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Cache-Control": "public, max-age=30"
+        }
+      });
+    }
+
     if (url.pathname === "/api/cache" && request.method === "POST") {
       try {
         const payload = await request.json();
         
         // --- TURNSTILE VERIFICATION ---
         const token = payload.token;
-        if (!token) return new Response("Missing Turnstile token", { status: 403, headers: { "Access-Control-Allow-Origin": "*" } });
-        
-        if (!env.TURNSTILE_SECRET_KEY) {
-            return new Response("Server configuration error", { status: 500, headers: { "Access-Control-Allow-Origin": "*" } });
+        const secret = env.TURNSTILE_SECRET || env.TURNSTILE_SECRET_KEY;
+        const expectedAction = "turnstile-spin-v1";
+        const expectedHostnames = new Set([
+          "meshlog.camal.eu",
+          "localhost",
+          "127.0.0.1",
+          "mesh-log-mapper.xperia.workers.dev"
+        ]);
+
+        if (
+          typeof token !== "string" ||
+          token.length === 0 ||
+          token.length > 2048 ||
+          !secret
+        ) {
+          return new Response("Forbidden: Missing or invalid Turnstile token", {
+            status: 403,
+            headers: { "Access-Control-Allow-Origin": "*" }
+          });
         }
-        
-        let formData = new FormData();
-        formData.append("secret", env.TURNSTILE_SECRET_KEY);
-        formData.append("response", token);
-        const ip = request.headers.get("CF-Connecting-IP");
-        if (ip) formData.append("remoteip", ip);
-        
-        const siteverifyResult = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-            body: formData,
-            method: "POST"
-        });
-        const outcome = await siteverifyResult.json();
+
+        let outcome;
+        try {
+          const clientIp = request.headers.get("CF-Connecting-IP") || request.headers.get("X-Forwarded-For");
+          const verifyParams = new URLSearchParams({
+            secret: secret,
+            response: token
+          });
+          if (clientIp) verifyParams.append("remoteip", clientIp);
+
+          const siteverifyResult = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            signal: AbortSignal.timeout(10000),
+            body: verifyParams
+          });
+
+          if (!siteverifyResult.ok) {
+            return new Response("Forbidden: Turnstile upstream failure", {
+              status: 403,
+              headers: { "Access-Control-Allow-Origin": "*" }
+            });
+          }
+          outcome = await siteverifyResult.json();
+        } catch {
+          return new Response("Forbidden: Turnstile verification error", {
+            status: 403,
+            headers: { "Access-Control-Allow-Origin": "*" }
+          });
+        }
+
         // ponytail: validate action and hostname
-        if (!outcome.success || outcome.action !== "turnstile-spin-v1" || !["meshlog.camal.eu", "localhost", "127.0.0.1", "mesh-log-mapper.xperia.workers.dev"].includes(outcome.hostname)) {
-            return new Response("Forbidden: Turnstile verification failed", { status: 403, headers: { "Access-Control-Allow-Origin": "*" } });
+        if (
+          !outcome.success ||
+          (outcome.action && outcome.action !== expectedAction) ||
+          (outcome.hostname && !expectedHostnames.has(outcome.hostname))
+        ) {
+          return new Response("Forbidden: Turnstile verification failed", {
+            status: 403,
+            headers: { "Access-Control-Allow-Origin": "*" }
+          });
         }
 
         
@@ -55,6 +107,17 @@ export default {
         
         if (payload.isDemo) {
             await kv.put("parsed_graph", graphStr);
+            if (ctx && ctx.waitUntil) {
+                ctx.waitUntil((async () => {
+                    try {
+                        const list = JSON.parse((await kv.get("community_maps")) || "[]");
+                        const nodesCount = Array.isArray(payload.graph?.nodes) ? payload.graph.nodes.length : 0;
+                        const entry = { id: "demo", name: "Demo Network", time: Date.now(), nodesCount };
+                        const filtered = list.filter(m => m.id !== "demo");
+                        await kv.put("community_maps", JSON.stringify([entry, ...filtered].slice(0, 10)));
+                    } catch (e) {}
+                })());
+            }
             return new Response(JSON.stringify({ id: "demo" }), { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
         } else {
             const id = payload.fileHash || Math.random().toString(36).substring(2, 10);
@@ -64,6 +127,19 @@ export default {
                 await kv.put(`map_${id}`, graphStr);
             }
             
+            // Record latest community map non-blockingly
+            if (ctx && ctx.waitUntil) {
+                ctx.waitUntil((async () => {
+                    try {
+                        const list = JSON.parse((await kv.get("community_maps")) || "[]");
+                        const nodesCount = Array.isArray(payload.graph?.nodes) ? payload.graph.nodes.length : 0;
+                        const entry = { id, name: payload.customName || `Map ${id}`, time: Date.now(), nodesCount };
+                        const filtered = list.filter(m => m.id !== id);
+                        await kv.put("community_maps", JSON.stringify([entry, ...filtered].slice(0, 10)));
+                    } catch (e) {}
+                })());
+            }
+
             const shortUrl = `https://meshlog.camal.eu/?map=${id}`;
             
             return new Response(JSON.stringify({ id, shortUrl }), { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
