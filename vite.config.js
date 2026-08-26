@@ -109,7 +109,7 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/(?:[a-z]\.basemaps\.cartocdn\.com|server\.arcgisonline\.com|[a-z]\.tile\.openstreetmap\.org|[a-z]\.tile\.opentopomap\.org)\/.*/i,
+            urlPattern: /^https:\/\/(?:[a-z]\.basemaps\.cartocdn\.com|server\.arcgisonline\.com|[a-z]\.tile\.openstreetmap\.org|[a-z]\.tile\.openstreetmap\.fr|[a-z]\.tile\.opentopomap\.org)\/.*/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'leaflet-tiles-cache',

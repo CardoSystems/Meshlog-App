@@ -971,24 +971,42 @@ function initializeDashboard(graphData) {
         shadowUrl: '/images/marker-shadow.png'
     });
 
-    const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', maxZoom: 19 });
-    const lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', maxZoom: 19 });
+    // ponytail: PotatoMesh stacked blended basemap engine (CARTO Voyager base + OSM HOT overlay)
+    const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19,
+        className: 'map-tiles-fallback',
+        crossOrigin: 'anonymous',
+        subdomains: 'abcd',
+        detectRetina: true,
+        zIndex: 1
+    });
+
+    const osmHot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles by <a href="https://www.hotosm.org/">HOT</a>',
+        maxZoom: 19,
+        className: 'map-tiles-hot',
+        crossOrigin: 'anonymous',
+        subdomains: 'abc',
+        zIndex: 2
+    });
+
+    const blendedTiles = L.layerGroup([cartoVoyager, osmHot]);
     const satTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
     const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 });
     const topoTiles = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenTopoMap', maxZoom: 17 });
     const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
 
     const baseMaps = {
-        "Carto Dark": darkTiles,
-        "Carto Light": lightTiles,
+        "Dark (OSM Blend)": blendedTiles,
         "OpenStreetMap (Offline Cache)": osmTiles,
         "Open TOPO": topoTiles,
         "ESRI World TOPO": esriTopo,
         "ESRI Satellite": satTiles
     };
 
-    const savedLayerName = localStorage.getItem('selectedMapLayer') || "Carto Dark";
-    const defaultLayer = baseMaps[savedLayerName] || darkTiles;
+    const savedLayerName = localStorage.getItem('selectedMapLayer');
+    const defaultLayer = (savedLayerName && baseMaps[savedLayerName]) ? baseMaps[savedLayerName] : blendedTiles;
 
     // ponytail: default center on Continental Portugal [39.5, -8.0] at zoom 7 if unset/overzoomed
     const portugalCenter = [39.5, -8.0];

@@ -15,7 +15,8 @@ Required Notice: Copyright (c) 2026 CardoSystems
 
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png">
+    <link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin />
+    <link rel="preconnect" href="https://a.tile.openstreetmap.fr" crossorigin />
 
     <script>
         window.process = { env: { NODE_ENV: 'production' } };
@@ -422,7 +423,7 @@ Required Notice: Copyright (c) 2026 CardoSystems
                 <div id="terminal-header-bar" class="term-header-bar">
                     <!-- Title & Search (Priority) -->
                     <div class="term-header-search-group">
-                        <span style="color: #00bcd4; opacity: 0.8; font-weight: 600;">&gt;_</span>
+                        <span class="term-prompt">&gt;_</span>
                         <input type="search" id="node-filter" list="node-datalist" placeholder="Search Node ID..."
                             class="term-input term-input-large">
                     </div>
