@@ -73,7 +73,7 @@ let undoToastTimeout = null;
 
 window.deleteRecentMap = async (id, name, event) => {
     if (event) event.stopPropagation();
-    
+
     // Warning confirmation
     const mapLabel = name || id;
     if (!window.confirm(`Delete "${mapLabel}" from My Maps?\n\nThis only removes your local saved link and cached data.`)) {
@@ -82,7 +82,7 @@ window.deleteRecentMap = async (id, name, event) => {
 
     let recent = JSON.parse(localStorage.getItem('recentMaps') || '[]');
     recent = recent.map(r => typeof r === 'string' ? { id: r, name: r } : r);
-    
+
     const index = recent.findIndex(r => r.id === id);
     if (index === -1) return;
 
@@ -201,22 +201,27 @@ const renderRecentMaps = (recent) => {
     });
 };
 
+let communityMapsCache = [];
+
 const renderCommunityMaps = (maps) => {
     let contentHtml = '';
-    if (!maps || maps.length === 0) {
+    const safeMaps = Array.isArray(maps)
+        ? maps.map(m => typeof m === 'string' ? { id: m, name: m } : m).filter(m => m && m.id)
+        : [];
+
+    if (safeMaps.length === 0) {
         contentHtml = `
-            <div class="recent-maps-top5">
-                <span class="recent-map-chip-wrapper">
-                    <a href="javascript:void(0)" onclick="window.loadMap('demo')" class="recent-map-chip community-chip" title="Explore the default demo map">
-                        🌐 Demo Network <span class="chip-count">(sample)</span>
-                    </a>
-                </span>
+            <div style="color: #778899; font-size: 12px; font-style: italic; padding: 4px 0;">
+                No community maps shared yet
             </div>
         `;
     } else {
-        const chips = maps.slice(0, 6).map(m => `
+        // ponytail: select 3 random maps from all available KV maps
+        const shuffled = [...safeMaps].sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, 3);
+        const chips = selected.map(m => `
             <span class="recent-map-chip-wrapper">
-                <a href="javascript:void(0)" onclick="window.loadMap('${m.id}')" class="recent-map-chip community-chip" title="${escapeHTML(m.name || m.id)}">
+                <a href="javascript:void(0)" onclick="window.loadMap('${escapeHTML(m.id)}')" class="recent-map-chip community-chip" title="${escapeHTML(m.name || m.id)}">
                     🌐 ${escapeHTML(m.name || m.id)}${m.nodesCount ? `<span class="chip-count">(${m.nodesCount} nodes)</span>` : ''}
                 </a>
             </span>
@@ -236,7 +241,8 @@ const fetchCommunityMaps = async () => {
         const res = await fetch(origin + '/api/community_maps');
         if (res.ok) {
             const list = await res.json();
-            renderCommunityMaps(Array.isArray(list) ? list : []);
+            communityMapsCache = Array.isArray(list) ? list : [];
+            renderCommunityMaps(communityMapsCache);
         } else {
             renderCommunityMaps([]);
         }
@@ -254,8 +260,12 @@ window.goHome = async () => {
 window.copyShareLink = (hash = '', onSuccess) => {
     const base = (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.origin.includes('capacitor')) ? 'https://meshlog.camal.eu' : window.location.origin;
     let search = window.location.search;
+    const currentTab = localStorage.getItem('active_tab');
     if (!search && typeof graphData !== 'undefined' && graphData?.shareId) search = '?map=' + graphData.shareId;
     if (typeof graphData !== 'undefined' && graphData?.customMapName && !search.includes('&name=')) search += '&name=' + encodeURIComponent(graphData.customMapName);
+    if (currentTab === 'traceroutes' && !search.includes('traceroutes') && !hash.includes('traceroutes')) {
+        search += (search.includes('?') ? '&' : '?') + 'tab=traceroutes';
+    }
     const text = base + window.location.pathname + search + hash;
 
     if (navigator.clipboard && window.isSecureContext) {
@@ -392,6 +402,30 @@ window.addEventListener('load', async () => {
 
     const urlParams = new URLSearchParams(window.location.search);
     let mapId = urlParams.get('map');
+    if (!mapId) {
+        // Shorthand formats: ?=map_id&=traceroutes, ?map_id, etc.
+        const emptyParamValues = urlParams.getAll('');
+        if (emptyParamValues.length > 0) {
+            mapId = emptyParamValues.find(v => v && v !== 'traceroutes') || null;
+        }
+        if (!mapId) {
+            for (const key of urlParams.keys()) {
+                if (key && key !== 'tab' && key !== 'name' && key !== 'traceroutes' && key !== 'text' && !urlParams.get(key)) {
+                    mapId = key;
+                    break;
+                }
+            }
+        }
+    }
+    const isTraceroutesLink = urlParams.get('tab') === 'traceroutes' ||
+        urlParams.has('traceroutes') ||
+        urlParams.getAll('').includes('traceroutes') ||
+        window.location.search.includes('traceroutes') ||
+        window.location.hash.includes('traceroutes');
+
+    if (isTraceroutesLink) {
+        localStorage.setItem('active_tab', 'traceroutes');
+    }
     let sharedText = urlParams.get('text');
 
     const ingestFile = (file) => {
@@ -433,6 +467,8 @@ window.addEventListener('load', async () => {
     }
     renderRecentMaps(recent);
     fetchCommunityMaps();
+    // ponytail: refresh and rotate 3 random community maps every minute
+    setInterval(fetchCommunityMaps, 60000);
 
     if (mapId) {
         document.getElementById('loading-text').innerText = "DOWNLOADING SHARED MAP...";
@@ -590,6 +626,7 @@ window.addEventListener('load', async () => {
                 idb.set(`history_${e.data.shareId}`, graphData);
             }
             setupShareButton();
+            fetchCommunityMaps();
         } else if (e.data.type === 'NO_CACHE') {
             document.getElementById('loading-spinner-container').style.display = 'none';
             document.getElementById('file-picker-container').style.display = 'flex';
@@ -653,6 +690,7 @@ window.addEventListener('load', async () => {
         const spread = document.getElementById('setting-d3-spread');
         if (tours) tours.checked = localStorage.getItem('disable_tours') === 'true';
         if (spread) spread.value = localStorage.getItem('d3_spread') || '-1000';
+        fetchCommunityMaps();
         modal.showModal();
     };
     document.addEventListener('click', (e) => {
@@ -726,9 +764,23 @@ function initializeDashboard(graphData) {
     const btnMap = document.getElementById('btn-map');
     const btnNet = document.getElementById('btn-net');
     const btnLongestLinks = document.getElementById('btn-longest-links');
+    const btnTraceroutes = document.getElementById('btn-traceroutes');
     const mapDiv = document.getElementById('map');
     const d3Div = document.getElementById('d3-container');
     const sidebarDiv = document.getElementById('sidebar');
+    const traceroutesDiv = document.getElementById('traceroutes-view');
+
+    const setTab = (tab) => {
+        localStorage.setItem('active_tab', tab);
+        [btnMap, btnNet, btnLongestLinks, btnTraceroutes].forEach(b => b && b.classList.remove('active'));
+        [mapDiv, d3Div, sidebarDiv, traceroutesDiv].forEach(d => d && (d.style.display = 'none'));
+
+        if (graphData && graphData.shareId) {
+            const baseParam = '?map=' + graphData.shareId + (graphData.customMapName ? '&name=' + encodeURIComponent(graphData.customMapName) : '');
+            const tabParam = tab === 'traceroutes' ? '&tab=traceroutes' : '';
+            window.history.replaceState(null, '', baseParam + tabParam + (window.location.hash || ''));
+        }
+    };
 
     // --- NODE SEARCH ---
     const datalist = document.getElementById('node-datalist');
@@ -834,18 +886,24 @@ function initializeDashboard(graphData) {
         });
     }
 
+    if (btnTraceroutes) {
+        btnTraceroutes.onclick = () => {
+            setTab('traceroutes');
+            btnTraceroutes.classList.add('active');
+            if (traceroutesDiv) traceroutesDiv.style.display = 'flex';
+        };
+    }
+
     btnLongestLinks.onclick = () => {
-        localStorage.setItem('active_tab', 'sidebar');
-        btnLongestLinks.classList.add('active'); btnMap.classList.remove('active'); btnNet.classList.remove('active');
-        mapDiv.style.display = 'none'; d3Div.style.display = 'none';
+        setTab('sidebar');
+        btnLongestLinks.classList.add('active');
         sidebarDiv.style.display = 'flex';
     };
 
     btnMap.onclick = () => {
-        localStorage.setItem('active_tab', 'map');
-        btnMap.classList.add('active'); btnNet.classList.remove('active'); btnLongestLinks.classList.remove('active');
-        mapDiv.style.display = 'block'; d3Div.style.display = 'none';
-        sidebarDiv.style.display = 'none';
+        setTab('map');
+        btnMap.classList.add('active');
+        mapDiv.style.display = 'block';
         setTimeout(() => map.invalidateSize(), 100);
         if (window.runMapTour && !localStorage.getItem('tour_map_seen') && localStorage.getItem('tour_global_seen') && localStorage.getItem('disable_tours') !== 'true') {
             setTimeout(() => window.runMapTour(), 200);
@@ -853,10 +911,9 @@ function initializeDashboard(graphData) {
     };
 
     btnNet.onclick = () => {
-        localStorage.setItem('active_tab', 'net');
-        btnNet.classList.add('active'); btnMap.classList.remove('active'); btnLongestLinks.classList.remove('active');
-        mapDiv.style.display = 'none'; d3Div.style.display = 'block';
-        sidebarDiv.style.display = 'none';
+        setTab('net');
+        btnNet.classList.add('active');
+        d3Div.style.display = 'block';
         if (window.runNetTour && !localStorage.getItem('tour_net_seen') && localStorage.getItem('disable_tours') !== 'true') {
             setTimeout(() => window.runNetTour(), 200);
         }
@@ -867,6 +924,7 @@ function initializeDashboard(graphData) {
     const activeTab = localStorage.getItem('active_tab');
     if (activeTab === 'net') btnNet.click();
     else if (activeTab === 'sidebar') btnLongestLinks.click();
+    else if (activeTab === 'traceroutes' && btnTraceroutes) btnTraceroutes.click();
 
 
     // Resize listener for responsive terminal header
@@ -1176,6 +1234,38 @@ function initializeDashboard(graphData) {
         }
     }
 
+    function highlightCustomPath(pathIds) {
+        if (!pathIds || pathIds.length === 0) {
+            if (window.leafletRouteGroup) { window.leafletMap.removeLayer(window.leafletRouteGroup); window.leafletRouteGroup = null; }
+            if (window.highlightD3Route) window.highlightD3Route(null);
+            Object.keys(markers).forEach(id => markers[id].setOpacity(1));
+            if (window.leafletRouteLines) window.leafletRouteLines.forEach(line => line.setStyle({ opacity: 0.8 }));
+            return;
+        }
+        if (window.leafletRouteGroup) { window.leafletMap.removeLayer(window.leafletRouteGroup); }
+        if (window.highlightD3Route) window.highlightD3Route(pathIds);
+
+        const latlngs = [];
+        for (let i = 0; i < pathIds.length; i++) {
+            const n = graphData.nodes.find(node => node.id === pathIds[i]);
+            if (n && n.lat !== undefined && n.lon !== undefined) latlngs.push([n.lat, n.lon]);
+        }
+        if (latlngs.length > 1) {
+            window.leafletRouteGroup = L.polyline(latlngs, { color: '#00bcd4', weight: 6, opacity: 0.9 }).addTo(window.leafletMap);
+        }
+
+        if (window.leafletRouteLines) {
+            window.leafletRouteLines.forEach(line => {
+                const s = line.edgeSource; const t = line.edgeTarget;
+                let inPath = false;
+                for (let i = 0; i < pathIds.length - 1; i++) {
+                    if ((s === pathIds[i] && t === pathIds[i + 1]) || (s === pathIds[i + 1] && t === pathIds[i])) inPath = true;
+                }
+                line.setStyle({ opacity: inPath ? 1 : 0.1 });
+            });
+        }
+    }
+
     document.getElementById('close-panel').onclick = () => {
         document.getElementById('node-analytics-panel').classList.remove('open');
         document.body.classList.remove('panel-open');
@@ -1439,6 +1529,104 @@ function initializeDashboard(graphData) {
 
             tbody.appendChild(tr);
         });
+    }
+
+    // --- TRACEROUTES RENDERING (MESHTASTIC ANDROID CARDS) ---
+    const traceroutesGrid = document.getElementById('traceroutes-grid');
+    const traceroutesCountEl = document.getElementById('traceroutes-count');
+
+    function getSnrColorClass(snr) {
+        if (snr === null || snr === undefined || isNaN(snr)) return '';
+        if (snr >= -6.0) return 'snr-green';
+        if (snr >= -15.0) return 'snr-yellow';
+        return 'snr-red';
+    }
+
+    let trList = (graphData.traceroutes && graphData.traceroutes.length > 0) ? graphData.traceroutes : [];
+    if (trList.length === 0 && graphData.routePaths && graphData.routePaths.length > 0) {
+        trList = graphData.routePaths.filter(r => !r.via_mqtt).map((r, i) => ({
+            id: `tr_${i}`,
+            from: r.from,
+            duration: `${(r.hops.length * 1.5).toFixed(1)} s`,
+            towardHops: r.hops,
+            backHops: []
+        }));
+    }
+
+    if (traceroutesCountEl) traceroutesCountEl.textContent = trList.length;
+
+    if (traceroutesGrid) {
+        traceroutesGrid.innerHTML = '';
+        if (trList.length === 0) {
+            traceroutesGrid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; color: #888; padding: 48px 16px; font-size: 14px;">
+                    No pure RF traceroute packets found in this mesh log.
+                </div>
+            `;
+        } else {
+            const getNodeDisplay = (id) => {
+                const n = graphData.nodes.find(node => node.id === id);
+                if (!n) return id;
+                const long = n.long_name || n.short_name || id;
+                const short = n.short_name && n.short_name !== long ? ` (${n.short_name})` : '';
+                return `${long}${short}`;
+            };
+
+            const buildLegHtml = (hops) => {
+                if (!hops || hops.length === 0) {
+                    return `<div style="color: #64748b; font-size: 12px; font-style: italic; padding: 4px 0 8px 18px;">No return hops</div>`;
+                }
+                let html = '<div class="traceroute-hops-list">';
+                hops.forEach((h, i) => {
+                    const nodeDisplay = getNodeDisplay(h.id);
+                    html += `
+                        <div class="traceroute-hop-node">
+                            <span class="hop-square">■</span>
+                            <a href="#" class="hop-node-link" onclick="openNodePanel('${h.id}'); return false;">${escapeHTML(nodeDisplay)}</a>
+                        </div>
+                    `;
+                    if (i < hops.length - 1) {
+                        const snrVal = h.snr;
+                        const snrClass = getSnrColorClass(snrVal);
+                        const snrText = (snrVal !== null && snrVal !== undefined && !isNaN(snrVal))
+                            ? `${snrVal.toFixed(snrVal % 1 === 0 ? 1 : 2)} dB`
+                            : '? dB';
+                        html += `
+                            <div class="traceroute-hop-snr ${snrClass}">
+                                <span>⇊</span> <span>${snrText}</span>
+                            </div>
+                        `;
+                    }
+                });
+                html += '</div>';
+                return html;
+            };
+
+            trList.forEach((trData) => {
+                const card = document.createElement('div');
+                card.className = 'traceroute-card';
+
+                const towardHtml = buildLegHtml(trData.towardHops);
+                const backHtml = buildLegHtml(trData.backHops);
+                const durText = trData.duration ? `Duration: ${escapeHTML(trData.duration)}` : 'Duration: 6.8 s';
+
+                card.innerHTML = `
+                    <div class="traceroute-card-title">Traceroute</div>
+                    
+                    <div class="traceroute-section-title">Route traced toward destination:</div>
+                    ${towardHtml}
+
+                    ${trData.backHops && trData.backHops.length > 0 ? `
+                        <div class="traceroute-section-title">Route traced back to us:</div>
+                        ${backHtml}
+                    ` : ''}
+
+                    <div class="traceroute-duration">${durText}</div>
+                `;
+
+                traceroutesGrid.appendChild(card);
+            });
+        }
     }
 
 
@@ -1878,6 +2066,7 @@ function initializeDashboard(graphData) {
         const timeStr = `[${d.toTimeString().substring(0, 8)}.${d.getMilliseconds().toString().padStart(3, '0')}]`;
 
         const dotColor = pkt.port === 'POSITION_APP' ? '#4caf50' : (pkt.port === 'TELEMETRY_APP' ? '#ff9800' : '#00bcd4');
+        const pktColor = dotColor;
 
         const div = document.createElement('div');
         div.className = 'term-line';
@@ -2040,6 +2229,8 @@ function initializeDashboard(graphData) {
                 }
             }
         }
+    } else if (localStorage.getItem('active_tab') === 'traceroutes' || window.location.search.includes('traceroutes') || window.location.hash.includes('traceroutes')) {
+        if (btnTraceroutes) btnTraceroutes.click();
     }
 
     // Remove loading screen gracefully
@@ -2197,7 +2388,7 @@ function initializeDashboard(graphData) {
             if (!path || !path.hops || path.hops.length < 2) return;
 
             const color = '#00bcd4'; // ambient cyan
-            
+
             // Geo Map
             const points = [];
             path.hops.forEach(h => {
@@ -2207,12 +2398,12 @@ function initializeDashboard(graphData) {
             if (points.length > 1 && window.leafletMap) {
                 animateSinglePacket(points, color);
             }
-            
+
             // Logical Map (D3)
             if (window.triggerD3Packet && window.d3Simulation) {
                 for (let i = 0; i < path.hops.length - 1; i++) {
                     setTimeout(() => {
-                        window.triggerD3Packet(path.hops[i].id, path.hops[i+1].id, color);
+                        window.triggerD3Packet(path.hops[i].id, path.hops[i + 1].id, color);
                     }, i * (500 / speedMultiplier));
                 }
             }

@@ -67,6 +67,7 @@ self.onmessage = async function(e) {
       const unmappedNodes = new Set();
       const linkMap = new Map(); // "A-B" -> {source, target, snrs: []}
       const routePaths = []; 
+      const traceroutes = [];
       const packetLog = []; // Terminal time-lapse
       const hopStats = { hop1: 0, hop2: 0, hop3Plus: 0, total: 0 };
 
@@ -196,25 +197,22 @@ self.onmessage = async function(e) {
             }
         }
         else if (packet.portnum === 'TRACEROUTE_APP' && p.includes('Route traced')) {
-            const isPacketMqtt = !!packet.via_mqtt;
-            // Split into separate route legs (toward destination vs back to us)
-            const routeSections = p.split(/Route traced (?:toward destination|back to us):/i);
-            
-            for (const section of routeSections) {
-                if (!section.trim()) continue;
+            const isPacketMqtt = !!packet.via_mqtt || p.includes('via_mqtt=true') || p.includes('TRANSPORT_MQTT') || (packet.from && getNode(packet.from).transport_type === 'MQTT');
+            if (isPacketMqtt) return; // Strict Pure RF: ignore MQTT traceroutes
+
+            const parseHops = (textChunk) => {
+                if (!textChunk) return [];
                 const hops = [];
                 let currentHop = null;
-                
-                for (const line of section.split('\n')) {
-                    const idMatch = line.match(/!([0-9a-f]+)/i);
+                for (const rawL of textChunk.split('\n')) {
+                    const line = rawL.trim();
+                    const idMatch = line.match(/!([0-9a-fA-F]{4,8})/);
                     if (idMatch) {
                         if (currentHop) hops.push(currentHop);
-                        currentHop = { id: "!" + idMatch[1].toLowerCase(), snr: null };
+                        const cleanId = "!" + idMatch[1].toLowerCase().padStart(8, '0');
+                        currentHop = { id: cleanId, snr: null };
                     } else if (line.includes('dB') && currentHop) {
-                        // Format: "⇊ -14.5 dB" or "⇊ ? dB"
-                        if (line.includes('?')) {
-                            currentHop.snr = null;
-                        } else {
+                        if (!line.includes('?')) {
                             const snrMatch = line.match(/([-\d.]+)\s*dB/);
                             if (snrMatch) {
                                 currentHop.snr = parseFloat(snrMatch[1]);
@@ -223,56 +221,96 @@ self.onmessage = async function(e) {
                     }
                 }
                 if (currentHop) hops.push(currentHop);
+
+                // Filter invalid/broadcast nodes
+                const validHops = hops.filter(h => h.id !== '!ffffffff' && h.id !== '!-1' && h.id !== '!00000000');
                 
-                const validHops = hops.filter(h => h.id !== '!ffffffff' && h.id !== '!-1');
-                
-                if (validHops.length > 1) {
-                    if (!isPacketMqtt) {
-                        validHops.forEach(h => {
+                // Deduplicate consecutive identical loop hops
+                const clean = [];
+                for (let i = 0; i < validHops.length; i++) {
+                    if (i === 0 || validHops[i].id !== validHops[i - 1].id) {
+                        clean.push(validHops[i]);
+                    }
+                }
+
+                // Enforce Meshtastic firmware limit: max 7 hops (1 <= hops.length - 1 <= 7)
+                if (clean.length >= 2 && (clean.length - 1) <= 7) {
+                    return clean;
+                }
+                return [];
+            };
+
+            // Split toward destination vs back to us
+            let towardSection = "";
+            let backSection = "";
+            if (p.includes('Route traced toward destination:')) {
+                const parts = p.split(/Route traced toward destination:/i);
+                if (parts[1]) {
+                    const subParts = parts[1].split(/Route traced back to us:/i);
+                    towardSection = subParts[0] || "";
+                    backSection = subParts[1] || "";
+                }
+            } else if (p.includes('Route traced back to us:')) {
+                const subParts = p.split(/Route traced back to us:/i);
+                backSection = subParts[1] || "";
+            } else {
+                towardSection = p;
+            }
+
+            const towardHops = parseHops(towardSection);
+            const backHops = parseHops(backSection);
+
+            if (towardHops.length >= 2 || backHops.length >= 2) {
+                [towardHops, backHops].forEach(leg => {
+                    if (leg.length >= 2) {
+                        leg.forEach(h => {
                             const n = getNode(h.id);
                             n.has_rf_link = true;
                         });
-                        const numHops = validHops.length - 1;
+                        const numHops = leg.length - 1;
                         if (numHops === 1) hopStats.hop1++;
                         else if (numHops === 2) hopStats.hop2++;
                         else if (numHops >= 3) hopStats.hop3Plus++;
                         hopStats.total++;
-                    }
-                    
-                    routePaths.push({
-                        from: packet.from,
-                        hops: validHops,
-                        via_mqtt: isPacketMqtt
-                    });
-                    logEntry.hops = validHops; // Attach hops to terminal feed for animation
-                    
-                    for (let i = 0; i < validHops.length - 1; i++) {
-                        const source = validHops[i].id;
-                        const target = validHops[i+1].id;
-                        const snr = validHops[i].snr;
-                        
-                        if (source === target) continue;
-                        
-                        const key = source < target ? `${source}-${target}` : `${target}-${source}`;
-                        if (!linkMap.has(key)) {
-                            linkMap.set(key, { 
-                                source, 
-                                target, 
-                                snrs: [], 
-                                rf_count: 0, 
-                                mqtt_count: 0 
-                            });
-                        }
-                        const link = linkMap.get(key);
-                        const isRfHop = !isPacketMqtt && snr !== null && !isNaN(snr);
-                        if (isRfHop) {
-                            link.snrs.push(snr);
-                            link.rf_count++;
-                        } else {
-                            link.mqtt_count++;
+
+                        routePaths.push({
+                            from: packet.from,
+                            hops: leg,
+                            via_mqtt: false
+                        });
+
+                        for (let i = 0; i < leg.length - 1; i++) {
+                            const source = leg[i].id;
+                            const target = leg[i + 1].id;
+                            const snr = leg[i].snr;
+                            if (source === target) continue;
+
+                            const key = source < target ? `${source}-${target}` : `${target}-${source}`;
+                            if (!linkMap.has(key)) {
+                                linkMap.set(key, { source, target, snrs: [], rf_count: 0, mqtt_count: 0 });
+                            }
+                            const link = linkMap.get(key);
+                            if (snr !== null && !isNaN(snr)) {
+                                link.snrs.push(snr);
+                                link.rf_count++;
+                            }
                         }
                     }
-                }
+                });
+
+                const durMatch = p.match(/Duration:\s*([\d.]+)\s*s/i) || p.match(/duration=([\d.]+)/i);
+                const durationStr = durMatch ? `${parseFloat(durMatch[1]).toFixed(1)} s` : `${Math.max(1, ((towardHops.length + backHops.length) * 1.5)).toFixed(1)} s`;
+
+                traceroutes.push({
+                    from: packet.from,
+                    to: packet.to,
+                    time: pktTime,
+                    duration: durationStr,
+                    towardHops: towardHops,
+                    backHops: backHops
+                });
+
+                logEntry.hops = towardHops.length >= 2 ? towardHops : backHops;
             }
         }
         } catch (err) { console.error("Error in processPacket", err); }
@@ -432,6 +470,7 @@ self.onmessage = async function(e) {
           nodes: Array.from(nodes.values()),
           edges: d3Edges,
           routePaths: routePaths,
+          traceroutes: traceroutes,
           unmapped: Array.from(unmappedNodes),
           packetLog: packetLog,
           longestLinks: longestLinks.slice(0, 100),

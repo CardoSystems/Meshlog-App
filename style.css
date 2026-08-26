@@ -37,39 +37,92 @@ body {
 
 #view-controls {
     position: absolute;
-    top: 10px;
+    top: 12px;
     right: 320px;
     z-index: 2000;
-    background: rgba(34, 34, 34, 0.9);
-    padding: 5px;
-    border-radius: 10px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.5);
-    border: 1px solid #444;
+    background: rgba(22, 26, 35, 0.95);
+    backdrop-filter: blur(12px);
+    padding: 6px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 #view-controls button {
-    background: #333;
-    color: #fff;
-    border: 1px solid #555;
-    padding: 8px 15px;
-    border-radius: 5px;
+    background: #1c212c;
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 14px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.2s, color 0.2s, border-color 0.2s, transform 0.2s;
-    font-weight: bold;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 #view-controls button:hover {
-    background: #444;
+    background: #282f3f;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 #view-controls button.active {
     background: #00bcd4;
-    color: #000;
+    color: #0a0d14;
     border-color: #00bcd4;
+    font-weight: 700;
+    box-shadow: 0 0 12px rgba(0, 188, 212, 0.35);
 }
 
 #view-controls button:active {
     transform: scale(0.96);
+}
+
+#view-controls #btn-upload {
+    background: rgba(33, 150, 243, 0.15);
+    border-color: rgba(33, 150, 243, 0.4);
+    color: #64b5f6;
+}
+
+#view-controls #btn-upload:hover {
+    background: rgba(33, 150, 243, 0.25);
+    border-color: #2196f3;
+    color: #ffffff;
+}
+
+#view-controls #btn-settings {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #e2e8f0;
+}
+
+#view-controls #btn-settings:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+}
+
+#view-controls #btn-share {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: rgba(0, 229, 255, 0.35);
+    color: #00e5ff;
+    font-weight: 700;
+}
+
+#view-controls #btn-share:hover {
+    background: rgba(0, 229, 255, 0.22);
+    border-color: #00e5ff;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.25);
+}
+
+.mobile-only-btn {
+    display: none !important;
 }
 
 #main-content {
@@ -107,7 +160,8 @@ body {
     background: #0a0a0a;
 }
 
-#sidebar {
+#sidebar,
+#traceroutes-view {
     position: absolute;
     inset: 0;
     display: none;
@@ -181,7 +235,8 @@ body {
     font-size: 0.9rem;
 }
 
-.malla-table th, .malla-table td {
+.malla-table th,
+.malla-table td {
     padding: 12px 16px;
     text-align: left;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -212,11 +267,30 @@ body {
     border-radius: 0.25rem;
 }
 
-.badge-primary { background-color: #0d6efd; color: #fff; }
-.bg-success { background-color: #198754; color: #fff; }
-.bg-warning { background-color: #ffc107; color: #000; }
-.bg-danger { background-color: #dc3545; color: #fff; }
-.bg-secondary { background-color: #6c757d; color: #fff; }
+.badge-primary {
+    background-color: #0d6efd;
+    color: #fff;
+}
+
+.bg-success {
+    background-color: #198754;
+    color: #fff;
+}
+
+.bg-warning {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.bg-danger {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.bg-secondary {
+    background-color: #6c757d;
+    color: #fff;
+}
 
 .node-link {
     color: #00bcd4;
@@ -230,7 +304,8 @@ body {
     text-decoration: underline;
 }
 
-h2, h3 {
+h2,
+h3 {
     margin-top: 0;
     text-wrap: balance;
     font-weight: 300;
@@ -238,7 +313,9 @@ h2, h3 {
     color: #00bcd4;
 }
 
-button:active, .button:active, .term-toggle:active {
+button:active,
+.button:active,
+.term-toggle:active {
     transform: scale(0.96);
 }
 
@@ -394,7 +471,8 @@ button:active, .button:active, .term-toggle:active {
     gap: 8px;
     flex: 2 1 400px;
     max-width: 800px;
-    order: 2; /* Center element on desktop */
+    order: 2;
+    /* Center element on desktop */
 }
 
 .term-input.term-input-large {
@@ -412,7 +490,8 @@ button:active, .button:active, .term-toggle:active {
     flex-wrap: wrap;
     flex: 1 1 200px;
     justify-content: flex-start;
-    order: 1; /* Left element on desktop */
+    order: 1;
+    /* Left element on desktop */
 }
 
 .term-action-group {
@@ -421,21 +500,26 @@ button:active, .button:active, .term-toggle:active {
     align-items: center;
     flex: 1 1 200px;
     justify-content: flex-end;
-    order: 3; /* Right element on desktop */
+    order: 3;
+    /* Right element on desktop */
 }
 
 .term-btn {
     position: relative;
-    background: rgba(255, 255, 255, 0.08);
-    color: #e0e0e0;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    font-size: 11px;
+    background: #1e2430;
+    color: #f1f5f9;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    min-height: 32px;
     line-height: 1.2;
-    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
 .term-btn:active {
@@ -445,40 +529,66 @@ button:active, .button:active, .term-toggle:active {
 .term-btn::after {
     content: "";
     position: absolute;
-    /* Extend vertical hit area, limit horizontal to prevent overlap with 6px gap */
-    inset: -8px -3px; 
+    inset: -6px -4px;
 }
 
 .term-btn:hover {
-    background: rgba(255, 255, 255, 0.16);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
+    background: #2a3344;
+    border-color: rgba(255, 255, 255, 0.35);
+    color: #ffffff;
+}
+
+.term-btn:focus-visible,
+.term-select:focus-visible,
+.term-input:focus-visible {
+    outline: 2px solid #00bcd4;
+    outline-offset: 2px;
 }
 
 .term-select,
 .term-input {
-    background: rgba(0, 0, 0, 0.4);
-    color: #e0e0e0;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
+    background: #141822;
+    color: #f1f5f9;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
     outline: none;
-    height: 28px;
+    min-height: 32px;
     box-sizing: border-box;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-/* Optical alignment for the terminal toggle chevron */
+.term-select:hover,
+.term-input:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* High-contrast accessible styling for terminal toggle chevron */
 .term-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 2px 10px 4px 10px;
+    background: #252d3d;
+    color: #00e5ff;
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 32px;
+    padding: 6px 10px;
+}
+
+.term-toggle:hover {
+    background: rgba(0, 229, 255, 0.18);
+    border-color: #00e5ff;
+    color: #ffffff;
 }
 
 .term-select:focus,
 .term-input:focus {
     border-color: #00bcd4;
+    box-shadow: 0 0 0 1px #00bcd4;
 }
 
 
@@ -504,25 +614,28 @@ button:active, .button:active, .term-toggle:active {
     }
 
     .term-header-search-group {
-        order: 1; /* Move search box to the very top */
+        order: 1;
+        /* Move search box to the very top */
         flex: 1 1 100%;
         max-width: 100%;
         margin-bottom: 4px;
     }
 
     .term-header-filter-group {
-        order: 2; /* Push to bottom row */
+        order: 2;
+        /* Push to bottom row */
         flex: 1 1 auto;
         justify-content: flex-start;
     }
 
     .term-action-group {
-        order: 3; /* Push to bottom row */
+        order: 3;
+        /* Push to bottom row */
         flex: 1 1 auto;
         justify-content: flex-start;
     }
 
-    /* Use CSS Grid to precisely align the 5 buttons on mobile */
+    /* Use CSS Grid to precisely align the 5-6 buttons on mobile */
     /* z-index must beat driver-overlay (z-index ~99999) */
     #view-controls {
         top: 10px;
@@ -532,13 +645,14 @@ button:active, .button:active, .term-toggle:active {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
-        padding: 10px;
-        padding-right: 60px;
-        padding-bottom: 25px;
+        padding: 12px;
+        padding-top: 48px;
+        border-radius: 16px;
         z-index: 100001 !important;
-        background: rgba(20, 20, 20, 0.97);
-        border: 1px solid #444;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
+        background: rgba(18, 22, 30, 0.98);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
         transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
         overflow: visible;
         max-height: 500px;
@@ -565,19 +679,25 @@ button:active, .button:active, .term-toggle:active {
         align-items: center;
         justify-content: center;
         position: fixed !important;
-        top: 15px !important;
-        right: 15px !important;
+        top: 16px !important;
+        right: 16px !important;
         left: auto !important;
-        width: 44px !important;
-        height: 44px !important;
-        background: rgba(34, 34, 34, 0.9) !important;
+        width: 36px !important;
+        height: 36px !important;
+        background: rgba(30, 34, 45, 0.95) !important;
         color: #fff !important;
-        font-size: 24px;
+        font-size: 18px;
         padding: 0 !important;
         border-radius: 8px !important;
-        border: 1px solid #444 !important;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         z-index: 100005;
+        cursor: pointer;
+        transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+    }
+
+    #nav-toggle:active {
+        transform: scale(0.96);
     }
 
     .leaflet-top {
@@ -589,9 +709,22 @@ button:active, .button:active, .term-toggle:active {
     }
 
     #view-controls button {
-        padding: 10px 5px;
+        padding: 10px 8px;
         font-size: 13px;
         margin: 0;
+        min-height: 42px;
+    }
+
+    #view-controls #btn-upload {
+        grid-column: span 1;
+    }
+
+    #view-controls #btn-settings {
+        grid-column: span 1;
+    }
+
+    #view-controls #btn-share {
+        grid-column: span 2;
     }
 
     #node-search {
@@ -632,24 +765,39 @@ button:active, .button:active, .term-toggle:active {
     .term-header-filter-group,
     .term-action-group {
         flex-wrap: nowrap;
-        gap: 4px;
+        gap: 6px;
     }
 
-    .term-select, 
+    .term-select,
     .term-btn {
-        padding: 4px 6px;
-        font-size: 10px;
+        padding: 6px 8px;
+        font-size: 11.5px;
+        min-height: 36px;
+        box-sizing: border-box;
     }
-    
-    #port-filter, #hop-filter {
-        width: 70px;
+
+    .term-btn::after {
+        content: "";
+        position: absolute;
+        inset: -4px -3px;
+    }
+
+    #port-filter,
+    #hop-filter {
+        min-width: 75px;
+        width: auto;
+        min-height: 36px;
     }
 
     .term-action-group .term-toggle {
-        flex: 1 1 auto;
-        min-width: 32px;
+        flex: 0 0 auto;
+        min-width: 36px;
+        min-height: 36px;
         text-align: center;
         justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+        padding: 6px 10px;
     }
 
 
@@ -1202,7 +1350,7 @@ button:active, .button:active, .term-toggle:active {
     height: 34px !important;
     border-radius: 17px !important;
     line-height: 30px !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
     transition: transform 0.15s ease-out;
 }
 
@@ -1280,13 +1428,13 @@ button:active, .button:active, .term-toggle:active {
     margin-top: 4px;
     width: 100%;
     max-width: 420px;
-    background: rgba(22, 27, 34, 0.75);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: transparent;
+    backdrop-filter: none;
+    border: none;
     border-radius: 12px;
-    padding: 14px 16px;
+    padding: 8px 16px;
     text-align: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    box-shadow: none;
 }
 
 .landing-maps-title {
@@ -1335,7 +1483,8 @@ button:active, .button:active, .term-toggle:active {
     transition: all 0.15s ease;
 }
 
-.recent-maps-others-btn:hover, .recent-maps-others-btn.active {
+.recent-maps-others-btn:hover,
+.recent-maps-others-btn.active {
     background: rgba(76, 175, 80, 0.15);
     border-color: #4caf50;
     color: #4caf50;
@@ -1477,9 +1626,10 @@ button:active, .button:active, .term-toggle:active {
 
 /* Landing Screen Community Maps Card */
 .community-maps-card {
-    border-color: rgba(0, 188, 212, 0.2);
-    background: rgba(16, 24, 34, 0.8);
-    box-shadow: 0 4px 20px rgba(0, 188, 212, 0.08);
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
 }
 
 .community-maps-title {
@@ -1490,7 +1640,11 @@ button:active, .button:active, .term-toggle:active {
     color: #00bcd4 !important;
     background: rgba(0, 188, 212, 0.08) !important;
     border: 1px solid rgba(0, 188, 212, 0.3) !important;
-    padding: 6px 14px !important;
+    padding: 8px 14px !important;
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease !important;
 }
 
 .community-chip:hover {
@@ -1501,11 +1655,132 @@ button:active, .button:active, .term-toggle:active {
     box-shadow: 0 2px 10px rgba(0, 188, 212, 0.25) !important;
 }
 
+.community-chip:active {
+    transform: scale(0.96) !important;
+}
+
 .community-chip .chip-count {
     font-size: 10px;
     opacity: 0.75;
     margin-left: 4px;
     font-weight: normal;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Traceroutes 3x3 Card Grid (Meshtastic Android Style) */
+.traceroutes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    width: 100%;
+    margin-top: 10px;
+    padding-bottom: 40px;
+}
+
+@media (max-width: 1100px) {
+    .traceroutes-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .traceroutes-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.traceroute-card {
+    background: #232733;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 24px 22px 20px 22px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    color: #e2e8f0;
+}
+
+.traceroute-card-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    text-align: center;
+    margin: 0 0 18px 0;
+    letter-spacing: 0.2px;
+}
+
+.traceroute-section-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #94a3b8;
+    margin-top: 6px;
+    margin-bottom: 10px;
+}
+
+.traceroute-hops-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 12px;
+}
+
+.traceroute-hop-node {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #f1f5f9;
+}
+
+.traceroute-hop-node .hop-square {
+    color: #94a3b8;
+    font-size: 9px;
+    line-height: 1;
+}
+
+.traceroute-hop-node .hop-node-link {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.15s ease;
+    word-break: break-word;
+}
+
+.traceroute-hop-node .hop-node-link:hover {
+    color: #00bcd4;
+    text-decoration: underline;
+}
+
+.traceroute-hop-snr {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    padding-left: 18px;
+    margin: 1px 0 3px 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.snr-green {
+    color: #4caf50 !important;
+}
+
+.snr-yellow {
+    color: #ff9800 !important;
+}
+
+.snr-red {
+    color: #f44336 !important;
+}
+
+.traceroute-duration {
+    font-size: 13px;
+    color: #94a3b8;
+    margin-top: auto;
+    padding-top: 12px;
+    font-variant-numeric: tabular-nums;
 }
 
 /* Map Undo Toast */
@@ -1632,20 +1907,78 @@ button:active, .button:active, .term-toggle:active {
     border-radius: 2px;
 }
 
-.legend-gold { background: #ffd700; }
-.legend-amber { background: #ff9800; }
-.legend-cyan { background: #00bcd4; border-radius: 50%; box-shadow: inset 0 0 0 2px #111; }
-.legend-dashed { background: transparent; border: 2px dashed #888; border-radius: 50%; }
-.legend-green { background: #4caf50; border-radius: 50%; }
-.legend-purple { background: #ab47bc; border-radius: 4px; }
+.legend-gold {
+    background: #ffd700;
+}
+
+.legend-amber {
+    background: #ff9800;
+}
+
+.legend-cyan {
+    background: #00bcd4;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 2px #111;
+}
+
+.legend-dashed {
+    background: transparent;
+    border: 2px dashed #888;
+    border-radius: 50%;
+}
+
+.legend-green {
+    background: #4caf50;
+    border-radius: 50%;
+}
+
+.legend-purple {
+    background: #ab47bc;
+    border-radius: 4px;
+}
 
 /* D3 Logical Map Legend Colors (matching SVG circles) */
-.d3-legend-gateway { background: #2196f3; border: 2px solid #ab47bc; border-radius: 50%; box-sizing: border-box; }
-.d3-legend-router { background: #2196f3; border: 2px solid #ffd700; border-radius: 50%; box-sizing: border-box; }
-.d3-legend-router-late { background: #2196f3; border: 1px solid #ff9800; border-radius: 50%; box-sizing: border-box; }
-.d3-legend-client-base { background: #00bcd4; border: 2px solid #00bcd4; border-radius: 50%; box-sizing: border-box; }
-.d3-legend-client-mute { background: #2196f3; border: 1px dashed #fff; border-radius: 50%; box-sizing: border-box; }
-.d3-legend-standard { background: #2196f3; border: 1px solid #fff; border-radius: 50%; box-sizing: border-box; }
+.d3-legend-gateway {
+    background: #2196f3;
+    border: 2px solid #ab47bc;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+.d3-legend-router {
+    background: #2196f3;
+    border: 2px solid #ffd700;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+.d3-legend-router-late {
+    background: #2196f3;
+    border: 1px solid #ff9800;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+.d3-legend-client-base {
+    background: #00bcd4;
+    border: 2px solid #00bcd4;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+.d3-legend-client-mute {
+    background: #2196f3;
+    border: 1px dashed #fff;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+.d3-legend-standard {
+    background: #2196f3;
+    border: 1px solid #fff;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
 
 /* Node Role Markers */
 .marker-role-gateway {
@@ -1653,6 +1986,7 @@ button:active, .button:active, .term-toggle:active {
     border: 2px solid #ab47bc !important;
     box-shadow: 0 0 10px rgba(171, 71, 188, 0.7) !important;
 }
+
 .marker-role-router {
     border-radius: 4px !important;
     border: 2px solid #ffd700 !important;

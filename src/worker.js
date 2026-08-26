@@ -8,31 +8,53 @@ export default {
 
     if (url.pathname === "/api/data") {
       const id = url.searchParams.get("id");
-      const key = id ? `map_${id}` : "parsed_graph";
-      const data = await kv.get(key);
+      if (!id) {
+        return new Response(JSON.stringify({ error: "Missing map id" }), { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
+      }
+      const data = await kv.get(`map_${id}`);
       if (data) return new Response(data, { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache" } });
-      return new Response(null, { status: 404, headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache" } });
+      return new Response(JSON.stringify({ error: "Map not found" }), { status: 404, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache" } });
     }
     if (url.pathname === "/api/clear_cache" && !env.TURNSTILE_SECRET_KEY) {
       await kv.delete("parsed_graph");
       return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
     }
 
-    if (url.pathname === "/api/community_maps") {
-      const list = await kv.get("community_maps");
-      return new Response(list || "[]", {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Cache-Control": "public, max-age=30"
-        }
-      });
+    if (url.pathname === "/api/community_maps" || url.pathname === "/api/maps") {
+      try {
+        let allKeys = [];
+        let cursor = undefined;
+        do {
+          const listRes = await kv.list({ prefix: "map_", cursor, limit: 1000 });
+          allKeys.push(...(listRes.keys || []));
+          cursor = listRes.list_complete ? undefined : listRes.cursor;
+        } while (cursor);
+
+        const maps = allKeys.map(k => ({
+          id: k.name.replace(/^map_/, ""),
+          name: k.metadata?.name || `Map ${k.name.replace(/^map_/, "")}`,
+          nodesCount: k.metadata?.nodesCount || 0,
+          time: k.metadata?.time || 0
+        }));
+
+        return new Response(JSON.stringify(maps), {
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "public, max-age=15"
+          }
+        });
+      } catch (err) {
+        return new Response("[]", {
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
+      }
     }
 
     if (url.pathname === "/api/cache" && request.method === "POST") {
       try {
         const payload = await request.json();
-        
+
         // --- TURNSTILE VERIFICATION ---
         const token = payload.token;
         const secret = env.TURNSTILE_SECRET || env.TURNSTILE_SECRET_KEY;
@@ -98,54 +120,27 @@ export default {
           });
         }
 
-        
+
         // --- SIZE LIMIT CHECK (Max 25 MiB for KV) ---
         const graphStr = JSON.stringify(payload.graph || {});
         if (graphStr.length > 26214400) {
-            return new Response("Payload too large (Max 25 MiB)", { status: 413, headers: { "Access-Control-Allow-Origin": "*" } });
+          return new Response("Payload too large (Max 25 MiB)", { status: 413, headers: { "Access-Control-Allow-Origin": "*" } });
         }
-        
-        if (payload.isDemo) {
-            await kv.put("parsed_graph", graphStr);
-            if (ctx && ctx.waitUntil) {
-                ctx.waitUntil((async () => {
-                    try {
-                        const list = JSON.parse((await kv.get("community_maps")) || "[]");
-                        const nodesCount = Array.isArray(payload.graph?.nodes) ? payload.graph.nodes.length : 0;
-                        const entry = { id: "demo", name: "Demo Network", time: Date.now(), nodesCount };
-                        const filtered = list.filter(m => m.id !== "demo");
-                        await kv.put("community_maps", JSON.stringify([entry, ...filtered].slice(0, 10)));
-                    } catch (e) {}
-                })());
-            }
-            return new Response(JSON.stringify({ id: "demo" }), { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
-        } else {
-            const id = payload.fileHash || Math.random().toString(36).substring(2, 10);
-            
-            // ponytail: skip KV write if duplicate
-            if (!(await kv.get(`map_${id}`))) {
-                await kv.put(`map_${id}`, graphStr);
-            }
-            
-            // Record latest community map non-blockingly
-            if (ctx && ctx.waitUntil) {
-                ctx.waitUntil((async () => {
-                    try {
-                        const list = JSON.parse((await kv.get("community_maps")) || "[]");
-                        const nodesCount = Array.isArray(payload.graph?.nodes) ? payload.graph.nodes.length : 0;
-                        const entry = { id, name: payload.customName || `Map ${id}`, time: Date.now(), nodesCount };
-                        const filtered = list.filter(m => m.id !== id);
-                        await kv.put("community_maps", JSON.stringify([entry, ...filtered].slice(0, 10)));
-                    } catch (e) {}
-                })());
-            }
 
-            const shortUrl = `https://meshlog.camal.eu/?map=${id}`;
-            
-            return new Response(JSON.stringify({ id, shortUrl }), { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
-        }
+        const id = payload.fileHash || Math.random().toString(36).substring(2, 10);
+        const nodesCount = Array.isArray(payload.graph?.nodes) ? payload.graph.nodes.length : 0;
+        const customName = payload.customName || `Map ${id}`;
+
+        // ponytail: save map data in KV with metadata
+        await kv.put(`map_${id}`, graphStr, {
+          metadata: { name: customName, nodesCount: nodesCount, time: Date.now() }
+        });
+
+        const shortUrl = `https://meshlog.camal.eu/?map=${id}`;
+
+        return new Response(JSON.stringify({ id, shortUrl }), { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
       } catch (err) {
-         return new Response("Invalid request", { status: 400 });
+        return new Response("Invalid request", { status: 400 });
       }
     }
 
@@ -153,7 +148,7 @@ export default {
 
     // Serve static assets natively and inject analytics
     const response = await env.ASSETS.fetch(request);
-    
+
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("text/html")) {
       return new HTMLRewriter()

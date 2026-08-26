@@ -61,8 +61,9 @@ Required Notice: Copyright (c) 2026 CardoSystems
     <script defer src="https://encom-boardroom-dashboard.pages.dev/tracker.js"></script>
 
     <!-- Cloudflare Web Analytics -->
-     <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "ec065947e5ee41ec91081f3e3d353ffb"}'></script>
-     <!-- End Cloudflare Web Analytics -->
+    <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js'
+        data-cf-beacon='{"token": "ec065947e5ee41ec91081f3e3d353ffb"}'></script>
+    <!-- End Cloudflare Web Analytics -->
 
 </head>
 
@@ -189,7 +190,8 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <div
                 style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #fff; text-shadow: 0 0 10px #fff;">
                 MESHTASTIC LOG MAPPER</div>
-            <p style="color: #aaa; text-align: center; font-size: 14px; margin: 0;">Select a raw .txt debug log file to parse offline.</p>
+            <p style="color: #aaa; text-align: center; font-size: 14px; margin: 0;">Select a raw .txt debug log file to
+                parse offline.</p>
             <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center;">
                 <input type="file" id="log-file-input" accept=".txt"
                     style="background: #252830; color: white; padding: 10px 14px; border-radius: 8px; border: 1px solid #444; cursor: pointer; outline: none;">
@@ -272,13 +274,10 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <button id="btn-map" class="active">Geo Map</button>
             <button id="btn-net">Logical Network</button>
             <button id="btn-longest-links">Longest Links</button>
-            <button id="btn-upload"
-                style="background: #2196F3; border-color: #2196F3; color: white; cursor: pointer;">Upload Log</button>
-            <button id="btn-settings"
-                style="background: #607d8b; border-color: #607d8b; color: white; cursor: pointer;">⚙️ Settings</button>
-            <button id="btn-share"
-                style="display:none; background: #3f51b5; border-color: #3f51b5; color: white; cursor: pointer; font-weight: bold;">🔗
-                Share Map</button>
+            <button id="btn-traceroutes">Traceroutes</button>
+            <button id="btn-upload">Upload Log</button>
+            <button id="btn-settings">⚙️ Settings</button>
+            <button id="btn-share" style="display:none;">🔗 Share Map</button>
             <input type="file" id="dashboard-upload-input" accept=".txt" style="display: none;">
         </div>
         <button id="nav-toggle" class="mobile-only">☰</button>
@@ -290,24 +289,44 @@ Required Notice: Copyright (c) 2026 CardoSystems
                         <h4>Geo Map Guide</h4>
                         <div class="geo-help-section">
                             <strong>Node Marker Roles:</strong>
-                            <div class="legend-item"><div class="legend-shape legend-square legend-gold"></div> Router / Repeater (Gold Square)</div>
-                            <div class="legend-item"><div class="legend-shape legend-square legend-amber"></div> Router Late (Amber Square)</div>
-                            <div class="legend-item"><div class="legend-shape legend-circle legend-cyan"></div> Client Base (Cyan Ring)</div>
-                            <div class="legend-item"><div class="legend-shape legend-circle legend-dashed"></div> Client Mute (Dashed Circle)</div>
-                            <div class="legend-item"><div class="legend-shape legend-circle legend-green"></div> Standard Client (Circle)</div>
+                            <div class="legend-item">
+                                <div class="legend-shape legend-square legend-gold"></div> Router / Repeater (Gold
+                                Square)
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-shape legend-square legend-amber"></div> Router Late (Amber Square)
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-shape legend-circle legend-cyan"></div> Client Base (Cyan Ring)
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-shape legend-circle legend-dashed"></div> Client Mute (Dashed Circle)
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-shape legend-circle legend-green"></div> Standard Client (Circle)
+                            </div>
                         </div>
                         <div class="geo-help-section">
                             <strong>Signal Quality (SNR):</strong>
-                            <div class="legend-item"><div class="legend-color" style="background: #4caf50;"></div> &gt; -5 dB (Excellent)</div>
-                            <div class="legend-item"><div class="legend-color" style="background: #ffc107;"></div> -15 to -5 dB (Fair)</div>
-                            <div class="legend-item"><div class="legend-color" style="background: #f44336;"></div> &le; -15 dB (Poor)</div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #4caf50;"></div> &gt; -5 dB (Excellent)
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #ffc107;"></div> -15 to -5 dB (Fair)
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #f44336;"></div> &le; -15 dB (Poor)
+                            </div>
                         </div>
                         <div class="geo-help-section">
                             <strong>Transport Badges:</strong>
-                            <div><span class="transport-badge transport-badge-gw">GW 🌐</span> Explicit Internet Gateway</div>
+                            <div><span class="transport-badge transport-badge-gw">GW 🌐</span> Explicit Internet Gateway
+                            </div>
                             <div><span class="transport-badge transport-badge-rf">RF 📻</span> LoRa Radio Direct</div>
-                            <div><span class="transport-badge transport-badge-mqtt">MQTT 🌐</span> Internet Gateway</div>
-                            <div><span class="transport-badge transport-badge-hybrid">RF + MQTT 🌐📻</span> Dual / Hybrid Transport</div>
+                            <div><span class="transport-badge transport-badge-mqtt">MQTT 🌐</span> Internet Gateway
+                            </div>
+                            <div><span class="transport-badge transport-badge-hybrid">RF + MQTT 🌐📻</span> Dual /
+                                Hybrid Transport</div>
                         </div>
                         <div class="geo-help-section geo-help-tips">
                             <strong>Controls:</strong>
@@ -325,12 +344,24 @@ Required Notice: Copyright (c) 2026 CardoSystems
                         <h4>Network Graph Guide</h4>
                         <div class="geo-help-section">
                             <strong>Node Marker Shapes:</strong>
-                            <div class="legend-item"><div class="legend-shape d3-legend-gateway"></div> Gateway Node (Purple Border)</div>
-                            <div class="legend-item"><div class="legend-shape d3-legend-router"></div> Router Node (Gold Border)</div>
-                            <div class="legend-item"><div class="legend-shape d3-legend-router-late"></div> Router Late (Amber Border)</div>
-                            <div class="legend-item"><div class="legend-shape d3-legend-client-base"></div> Client Base (Cyan)</div>
-                            <div class="legend-item"><div class="legend-shape d3-legend-client-mute"></div> Client Mute (Dashed Border)</div>
-                            <div class="legend-item"><div class="legend-shape d3-legend-standard"></div> Standard Node (White Border)</div>
+                            <div class="legend-item">
+                                <div class="legend-shape d3-legend-gateway"></div> Gateway Node (Purple Border)
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-shape d3-legend-router"></div> Router Node (Gold Border)
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-shape d3-legend-router-late"></div> Router Late (Amber Border)
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-shape d3-legend-client-base"></div> Client Base (Cyan)
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-shape d3-legend-client-mute"></div> Client Mute (Dashed Border)
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-shape d3-legend-standard"></div> Standard Node (White Border)
+                            </div>
                         </div>
                         <div class="geo-help-section">
                             <strong>Graph Elements:</strong>
@@ -374,6 +405,16 @@ Required Notice: Copyright (c) 2026 CardoSystems
                     </table>
                 </div>
             </div>
+            <div id="traceroutes-view" style="display: none;">
+                <div class="sidebar-header">
+                    <h2>Traceroutes 📡</h2>
+                    <span id="traceroutes-count" class="badge badge-primary">0</span>
+                </div>
+
+                <div id="traceroutes-grid" class="traceroutes-grid">
+                    <!-- Populated by JS as 3x3 cards matching the Android dialog images -->
+                </div>
+            </div>
         </div>
 
         <div id="terminal-container">
@@ -382,7 +423,8 @@ Required Notice: Copyright (c) 2026 CardoSystems
                     <!-- Title & Search (Priority) -->
                     <div class="term-header-search-group">
                         <span style="color: #00bcd4; opacity: 0.8; font-weight: 600;">&gt;_</span>
-                        <input type="search" id="node-filter" list="node-datalist" placeholder="Search Node ID..." class="term-input term-input-large">
+                        <input type="search" id="node-filter" list="node-datalist" placeholder="Search Node ID..."
+                            class="term-input term-input-large">
                     </div>
 
                     <!-- Dropdown Filters -->
@@ -458,7 +500,8 @@ Required Notice: Copyright (c) 2026 CardoSystems
         <div class="panel-header" style="margin-bottom: 24px; padding-right: 64px;">
             <div style="display: flex; flex-direction: column; gap: 6px;">
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <h2 id="panel-node-name" style="margin: 0; color: #4caf50; font-size: 18px; word-break: break-word;">Node Name</h2>
+                    <h2 id="panel-node-name"
+                        style="margin: 0; color: #4caf50; font-size: 18px; word-break: break-word;">Node Name</h2>
                     <span id="panel-node-status" class="badge bg-secondary" style="font-size: 11px;">Unknown</span>
                 </div>
                 <div id="panel-node-id" style="color: #888; font-family: monospace; font-size: 12px;"></div>
@@ -495,15 +538,14 @@ Required Notice: Copyright (c) 2026 CardoSystems
         style="background: #222; color: #fff; border: 1px solid #444; border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5), 0 2px 4px -2px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.5); width: 320px; max-width: 90vw; max-height: 85vh; overflow-y: auto;">
         <h3 style="margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px;">App Settings</h3>
 
-        <div
-            style="margin-bottom: 15px; padding: 10px; border: 1px solid #4caf50; border-radius: 8px; background: rgba(76, 175, 80, 0.05);">
+        <div style="margin-bottom: 15px; padding: 4px 0; background: transparent; border: none;">
             <div style="font-size: 12px; color: #4caf50; font-weight: bold; margin-bottom: 8px;">My Maps📍</div>
             <div id="recent-maps" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
         </div>
 
-        <div
-            style="margin-bottom: 15px; padding: 10px; border: 1px solid rgba(0, 188, 212, 0.4); border-radius: 8px; background: rgba(0, 188, 212, 0.05);">
-            <div style="font-size: 12px; color: #00bcd4; font-weight: bold; margin-bottom: 8px;">Latest Community Maps 🌐</div>
+        <div style="margin-bottom: 15px; padding: 4px 0; background: transparent; border: none;">
+            <div style="font-size: 12px; color: #00bcd4; font-weight: bold; margin-bottom: 8px;">Latest Community Maps
+                🌐</div>
             <div id="recent-community-maps" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
         </div>
 
@@ -513,7 +555,7 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <div style="display: flex; gap: 8px;">
                 <button id="btn-modal-tutorial"
                     style="flex: 1; background: #e91e63; border: none; color: white; padding: 10px 16px; min-height: 40px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">Tutorial
-                    🎓</button>
+                </button>
                 <button id="btn-modal-home" onclick="window.goHome()"
                     style="flex: 1; background: #9c27b0; border: none; color: white; padding: 10px 16px; min-height: 40px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">HOME
                     🌐</button>
