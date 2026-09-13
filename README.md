@@ -7,7 +7,7 @@
 ---
 
 <div align="center">
-  <img src="Untitled.png" alt="home" width="1080">
+  <img src="Screenshot 2026-09-13 045301.png" alt="home" width="1080">
 </div>
 
 ---
