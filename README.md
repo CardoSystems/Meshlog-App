@@ -40,6 +40,11 @@ You are permitted to view, fork, and modify the software for personal, academic,
   <img src="meshlog-flow-diagram.drawio.png" alt="Meshlog Full Flow Diagram" width="800">
 </div>
 
+## Third-Party Credits
+
+- **PotatoMesh Map Engine**: The stacked blended dark basemap architecture is derived from [PotatoMesh](https://github.com/l5yth/potato-mesh) by l5yth & contributors, licensed under Apache-2.0. See `NOTICE` for details.
+
 ## © Copyright
 
 Copyright (c) 2026 CardoSystems. All rights reserved.
+

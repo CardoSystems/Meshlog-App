@@ -23,8 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
-# Requested by user
-architecture_review.md
+# Markdown files (exclude all except README)
+*.md
+!README.md
+
 .agents
 tests/
 

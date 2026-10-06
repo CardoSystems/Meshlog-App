@@ -132,3 +132,11 @@ software under these terms.
 **Use** means anything you do with the software requiring one
 of your licenses.
 
+## Third-Party Notices
+
+Portions of this software (the Stacked Blended Map Tile Engine) are derived
+from PotatoMesh (https://github.com/l5yth/potato-mesh), licensed under the
+Apache License, Version 2.0. See NOTICE for full copyright attributions
+and component license details.
+
+

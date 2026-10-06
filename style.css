@@ -358,7 +358,8 @@ button:active,
     background: #111 !important;
 }
 
-/* PotatoMesh Blended Basemap Tile Engine */
+/* Stacked Blended Basemap Tile Engine - Derived from PotatoMesh (https://github.com/l5yth/potato-mesh)
+   Copyright (c) 2025-2026 l5yth & contributors. Licensed under Apache-2.0. */
 #map .leaflet-tile-pane {
     opacity: 0.75;
 }

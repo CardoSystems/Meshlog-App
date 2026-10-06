@@ -971,7 +971,8 @@ function initializeDashboard(graphData) {
         shadowUrl: '/images/marker-shadow.png'
     });
 
-    // ponytail: PotatoMesh stacked blended basemap engine (CARTO Voyager base + OSM HOT overlay)
+    // Stacked blended basemap engine derived from PotatoMesh (https://github.com/l5yth/potato-mesh)
+    // Copyright (c) 2025-2026 l5yth & contributors. Licensed under Apache-2.0.
     const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://carto.com/">CARTO</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19,
@@ -983,7 +984,7 @@ function initializeDashboard(graphData) {
     });
 
     const osmHot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles by <a href="https://www.hotosm.org/">HOT</a>',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles: <a href="https://www.hotosm.org/">HOT</a>, Blend engine: <a href="https://github.com/l5yth/potato-mesh" target="_blank" rel="noopener">PotatoMesh (l5yth)</a>',
         maxZoom: 19,
         className: 'map-tiles-hot',
         crossOrigin: 'anonymous',
