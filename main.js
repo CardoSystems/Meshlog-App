@@ -4,6 +4,10 @@ Copyright (c) 2026 CardoSystems
 # PolyForm Noncommercial License 1.0.0
 
 <https://polyformproject.org/licenses/noncommercial/1.0.0>
+
+Third-Party Notice:
+The Stacked Blended Map Tile Engine is derived from PotatoMesh (https://github.com/l5yth/potato-mesh)
+Copyright (c) 2025-2026 l5yth & contributors. Licensed under Apache-2.0 (see LICENSE-APACHE2.0).
 */
 import { registerSW } from 'virtual:pwa-register';
 import { initThreeBg, disposeThreeBg } from './src/three-bg.js';
