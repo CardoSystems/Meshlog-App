@@ -972,7 +972,7 @@ function initializeDashboard(graphData) {
     });
 
     // Stacked blended basemap engine derived from PotatoMesh (https://github.com/l5yth/potato-mesh)
-    // Copyright (c) 2025-2026 l5yth & contributors. Licensed under Apache-2.0.
+    // Copyright (c) 2025-2026 l5yth & contributors. Licensed under Apache-2.0 (see LICENSE-APACHE2.0, https://www.apache.org/licenses/LICENSE-2.0).
     const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://carto.com/">CARTO</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19,
