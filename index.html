@@ -71,7 +71,6 @@ Required Notice: Copyright (c) 2026 CardoSystems
 <body>
     <div id="offline-banner"
         style="display:none; position:fixed; top:90px; left:15px; text-align:center; z-index:9999;">
-        <div style="font-size:24px; filter: hue-rotate(0deg); line-height: 1;">🚨</div>
         <div style="color:red; font-size:10px; font-weight:bold; margin-top:2px;">OFFLINE</div>
     </div>
     <div id="loading-screen">
@@ -196,14 +195,14 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center;">
                 <input type="file" id="log-file-input" accept=".txt"
                     style="background: #252830; color: white; padding: 10px 14px; border-radius: 8px; border: 1px solid #444; cursor: pointer; outline: none;">
-                <button id="btn-install" class="pwa-install-btn" style="display:none;">📲 Install Meshlog App</button>
+                <button id="btn-install" class="pwa-install-btn" style="display:none;">Install Meshlog App</button>
             </div>
             <div class="landing-maps-card">
-                <div class="landing-maps-title">My Maps 📍</div>
+                <div class="landing-maps-title">My Maps</div>
                 <div id="landing-recent-maps" class="recent-maps-list"></div>
             </div>
             <div class="landing-maps-card community-maps-card">
-                <div class="landing-maps-title community-maps-title">Latest Community Maps 🌐</div>
+                <div class="landing-maps-title community-maps-title">Latest Community Maps</div>
                 <div id="landing-community-maps" class="recent-maps-list"></div>
             </div>
         </div>
@@ -277,15 +276,15 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <button id="btn-longest-links">Longest Links</button>
             <button id="btn-traceroutes">Traceroutes</button>
             <button id="btn-upload">Upload Log</button>
-            <button id="btn-settings">⚙️ Settings</button>
-            <button id="btn-share" style="display:none;">🔗 Share Map</button>
+            <button id="btn-settings">Settings</button>
+            <button id="btn-share" style="display:none;">Share Map</button>
             <input type="file" id="dashboard-upload-input" accept=".txt" style="display: none;">
         </div>
-        <button id="nav-toggle" class="mobile-only">☰</button>
+        <button id="nav-toggle" class="mobile-only">Menu</button>
         <div id="views">
             <div id="map">
                 <details class="geo-info-details">
-                    <summary class="geo-info-summary">ℹ️ MAP HELP</summary>
+                    <summary class="geo-info-summary">MAP HELP</summary>
                     <div class="geo-info-panel">
                         <h4>Geo Map Guide</h4>
                         <div class="geo-help-section">
@@ -321,12 +320,12 @@ Required Notice: Copyright (c) 2026 CardoSystems
                         </div>
                         <div class="geo-help-section">
                             <strong>Transport Badges:</strong>
-                            <div><span class="transport-badge transport-badge-gw">GW 🌐</span> Explicit Internet Gateway
+                            <div><span class="transport-badge transport-badge-gw">GW</span> Explicit Internet Gateway
                             </div>
-                            <div><span class="transport-badge transport-badge-rf">RF 📻</span> LoRa Radio Direct</div>
-                            <div><span class="transport-badge transport-badge-mqtt">MQTT 🌐</span> Internet Gateway
+                            <div><span class="transport-badge transport-badge-rf">RF</span> LoRa Radio Direct</div>
+                            <div><span class="transport-badge transport-badge-mqtt">MQTT</span> Internet Gateway
                             </div>
-                            <div><span class="transport-badge transport-badge-hybrid">RF + MQTT 🌐📻</span> Dual /
+                            <div><span class="transport-badge transport-badge-hybrid">RF + MQTT</span> Dual /
                                 Hybrid Transport</div>
                         </div>
                         <div class="geo-help-section geo-help-tips">
@@ -340,7 +339,7 @@ Required Notice: Copyright (c) 2026 CardoSystems
             <div id="d3-container">
                 <div id="d3-tooltip"></div>
                 <details class="geo-info-details">
-                    <summary class="geo-info-summary">ℹ️ GRAPH HELP</summary>
+                    <summary class="geo-info-summary">GRAPH HELP</summary>
                     <div class="geo-info-panel">
                         <h4>Network Graph Guide</h4>
                         <div class="geo-help-section">
@@ -408,7 +407,7 @@ Required Notice: Copyright (c) 2026 CardoSystems
             </div>
             <div id="traceroutes-view" style="display: none;">
                 <div class="sidebar-header">
-                    <h2>Traceroutes 📡</h2>
+                    <h2>Traceroutes</h2>
                     <span id="traceroutes-count" class="badge badge-primary">0</span>
                 </div>
 
@@ -540,13 +539,12 @@ Required Notice: Copyright (c) 2026 CardoSystems
         <h3 style="margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px;">App Settings</h3>
 
         <div style="margin-bottom: 15px; padding: 4px 0; background: transparent; border: none;">
-            <div style="font-size: 12px; color: #4caf50; font-weight: bold; margin-bottom: 8px;">My Maps📍</div>
+            <div style="font-size: 12px; color: #4caf50; font-weight: bold; margin-bottom: 8px;">My Maps</div>
             <div id="recent-maps" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
         </div>
 
         <div style="margin-bottom: 15px; padding: 4px 0; background: transparent; border: none;">
-            <div style="font-size: 12px; color: #00bcd4; font-weight: bold; margin-bottom: 8px;">Latest Community Maps
-                🌐</div>
+            <div style="font-size: 12px; color: #00bcd4; font-weight: bold; margin-bottom: 8px;">Latest Community Maps</div>
             <div id="recent-community-maps" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
         </div>
 
@@ -558,8 +556,7 @@ Required Notice: Copyright (c) 2026 CardoSystems
                     style="flex: 1; background: #e91e63; border: none; color: white; padding: 10px 16px; min-height: 40px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">Tutorial
                 </button>
                 <button id="btn-modal-home" onclick="window.goHome()"
-                    style="flex: 1; background: #9c27b0; border: none; color: white; padding: 10px 16px; min-height: 40px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">HOME
-                    🌐</button>
+                    style="flex: 1; background: #9c27b0; border: none; color: white; padding: 10px 16px; min-height: 40px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">HOME</button>
             </div>
         </div>
 
@@ -580,7 +577,7 @@ Required Notice: Copyright (c) 2026 CardoSystems
         </div>
 
         <div style="text-align: center; font-size: 11px; color: #888; margin-bottom: 15px;">
-            <span>(made with ❤️ by NXDOMAIN)</span><br>
+            <span>(made by NXDOMAIN)</span><br>
             <span id="build-timestamp" style="font-size: 9px; opacity: 0.6;"></span>
         </div>
 

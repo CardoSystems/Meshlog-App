@@ -139,7 +139,7 @@ function showUndoToast(mapName) {
 
     toast.innerHTML = `
         <span>Deleted <strong>${escapeHTML(mapName)}</strong></span>
-        <button onclick="window.undoDeleteMap()">Undo ↩</button>
+        <button onclick="window.undoDeleteMap()">Undo</button>
     `;
 
     toast.classList.add('show');
@@ -172,7 +172,7 @@ const renderRecentMaps = (recent) => {
             <a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" class="recent-map-chip" title="${r.id}">
                 ${escapeHTML(r.name || r.id)}
             </a>
-            <button type="button" class="recent-map-del-btn" title="Delete map" onclick="window.deleteRecentMap('${r.id}', '${escapeHTML(r.name || r.id)}', event)">✕</button>
+            <button type="button" class="recent-map-del-btn" title="Delete map" onclick="window.deleteRecentMap('${r.id}', '${escapeHTML(r.name || r.id)}', event)">x</button>
         </span>
     `).join('');
 
@@ -181,7 +181,7 @@ const renderRecentMaps = (recent) => {
         const othersItems = others.map(r => `
             <div class="recent-map-dropdown-row">
                 <a href="javascript:void(0)" onclick="window.loadMap('${r.id}')" class="recent-map-dropdown-item" title="${r.id}">${escapeHTML(r.name || r.id)}</a>
-                <button type="button" class="recent-map-del-btn dropdown-del" title="Delete map" onclick="window.deleteRecentMap('${r.id}', '${escapeHTML(r.name || r.id)}', event)">✕</button>
+                <button type="button" class="recent-map-del-btn dropdown-del" title="Delete map" onclick="window.deleteRecentMap('${r.id}', '${escapeHTML(r.name || r.id)}', event)">x</button>
             </div>
         `).join('');
 
@@ -226,7 +226,7 @@ const renderCommunityMaps = (maps) => {
         const chips = selected.map(m => `
             <span class="recent-map-chip-wrapper">
                 <a href="javascript:void(0)" onclick="window.loadMap('${escapeHTML(m.id)}')" class="recent-map-chip community-chip" title="${escapeHTML(m.name || m.id)}">
-                    🌐 ${escapeHTML(m.name || m.id)}${m.nodesCount ? `<span class="chip-count">(${m.nodesCount} nodes)</span>` : ''}
+                    ${escapeHTML(m.name || m.id)}${m.nodesCount ? `<span class="chip-count">(${m.nodesCount} nodes)</span>` : ''}
                 </a>
             </span>
         `).join('');
@@ -291,7 +291,7 @@ function setupShareButton() {
     shareBtn.onclick = () => {
         window.copyShareLink('', () => {
             const old = shareBtn.innerText;
-            shareBtn.innerText = '✅ Copied!';
+            shareBtn.innerText = 'Copied!';
             setTimeout(() => shareBtn.innerText = old, 2000);
         });
     };
@@ -579,7 +579,7 @@ window.addEventListener('load', async () => {
             if (e.data.isDuplicate) {
                 const toast = document.getElementById('centered-toast');
                 if (toast) {
-                    toast.innerText = "⚠️ Duplicate log detected. Redirected to original.";
+                    toast.innerText = "Duplicate log detected. Redirected to original.";
                     toast.style.display = 'block';
                     setTimeout(() => toast.style.display = 'none', 5000);
                 }
@@ -812,7 +812,7 @@ function initializeDashboard(graphData) {
 
             const node = graphData.nodes.find(n => (n.long_name || n.short_name || n.id) === val || n.id === val || n.id.toString() === val.toString());
             if (!node) {
-                showCenteredToast("❌ Node not found in graph");
+                showCenteredToast("Node not found in graph");
                 return;
             }
 
@@ -830,7 +830,7 @@ function initializeDashboard(graphData) {
                 e.target.blur();
             } else {
                 e.target.blur();
-                showCenteredToast("⚠️ Node lacks GPS fix");
+                showCenteredToast("Node lacks GPS fix");
             }
         });
     }
@@ -842,13 +842,13 @@ function initializeDashboard(graphData) {
     if (navToggle) {
         if (hasSeenTour && window.innerWidth <= 768) {
             viewControls.classList.add('collapsed'); // start collapsed on mobile if onboarded
-            navToggle.textContent = '☰'; // pointing down to expand
+            navToggle.textContent = 'Menu'; // pointing down to expand
         } else {
-            navToggle.textContent = '×'; // expanded
+            navToggle.textContent = 'Close'; // expanded
         }
         navToggle.onclick = () => {
             const isCollapsed = viewControls.classList.toggle('collapsed');
-            navToggle.textContent = isCollapsed ? '☰' : '×';
+            navToggle.textContent = isCollapsed ? 'Menu' : 'Close';
         };
     }
 
@@ -934,7 +934,7 @@ function initializeDashboard(graphData) {
     // Resize listener for responsive terminal header
     const mobileSearchInput = document.getElementById('node-filter');
     if (mobileSearchInput) {
-        const updateNF = () => { mobileSearchInput.placeholder = window.innerWidth <= 768 ? "🔍 Node" : "Search Node ID..."; };
+        const updateNF = () => { mobileSearchInput.placeholder = window.innerWidth <= 768 ? "Node" : "Search Node ID..."; };
         window.addEventListener('resize', updateNF);
         updateNF();
     }
@@ -1141,7 +1141,7 @@ function initializeDashboard(graphData) {
         document.getElementById('panel-node-name').innerText = node.long_name || node.short_name || node.id;
         document.getElementById('panel-node-id').innerText = node.id;
         const tType = node.is_gateway ? 'GW' : (node.transport_type || (node.via_mqtt ? 'MQTT' : 'RF'));
-        const badgeText = tType === 'GW' ? ' (GW 🌐)' : (tType === 'HYBRID' ? ' (RF + MQTT 🌐📻)' : (tType === 'MQTT' ? ' (MQTT 🌐)' : ' (RF 📻)'));
+        const badgeText = tType === 'GW' ? ' (GW)' : (tType === 'HYBRID' ? ' (RF + MQTT)' : (tType === 'MQTT' ? ' (MQTT)' : ' (RF)'));
         document.getElementById('panel-hw-model').innerText = (node.hw_model || '-') + badgeText;
         document.getElementById('panel-traffic').innerText = node.traffic_volume || 0;
 
@@ -1365,12 +1365,12 @@ function initializeDashboard(graphData) {
             let html = `<div class="popup-header">${escapeHTML(node.long_name || node.id)}</div>`;
             const tType = node.is_gateway ? 'GW' : (node.transport_type || (node.via_mqtt ? 'MQTT' : 'RF'));
             const transportBadge = tType === 'GW'
-                ? `<span class="transport-badge transport-badge-gw">GW 🌐</span>`
+                ? `<span class="transport-badge transport-badge-gw">GW</span>`
                 : (tType === 'HYBRID'
-                    ? `<span class="transport-badge transport-badge-hybrid">RF + MQTT 🌐📻</span>`
+                    ? `<span class="transport-badge transport-badge-hybrid">RF + MQTT</span>`
                     : (tType === 'MQTT'
-                        ? `<span class="transport-badge transport-badge-mqtt">MQTT 🌐</span>`
-                        : `<span class="transport-badge transport-badge-rf">RF 📻</span>`));
+                        ? `<span class="transport-badge transport-badge-mqtt">MQTT</span>`
+                        : `<span class="transport-badge transport-badge-rf">RF</span>`));
             if (node.hw_model) html += `<div>Model: ${escapeHTML(node.hw_model)} ${transportBadge}</div>`;
             else html += `<div>Transport: ${transportBadge}</div>`;
             if (node.role) html += `<div style="color:#ffd700;font-weight:bold;font-size:11px;">Role: ${escapeHTML(node.role)}</div>`;
@@ -1379,7 +1379,7 @@ function initializeDashboard(graphData) {
             if (latestTelem && latestTelem.uptime_seconds) html += `<div style="color:#aaa;font-size:11px;">Uptime: ${Math.floor(latestTelem.uptime_seconds / 3600)}h ${Math.floor((latestTelem.uptime_seconds % 3600) / 60)}m</div>`;
             html += `<div>Traffic Volume: ${node.traffic_volume} pkts</div>`;
             html += `<div style="margin-top:10px;color:#00bcd4;cursor:pointer;font-weight:bold;font-size:12px;" onclick="document.dispatchEvent(new CustomEvent('openNodePanel', {detail: '${node.id}'}))">VIEW ANALYTICS &rarr;</div>`;
-            html += `<div style="margin-top:8px;color:#7c3aed;cursor:pointer;font-weight:bold;font-size:12px;" onclick="document.dispatchEvent(new CustomEvent('copyNodeLink', {detail: '${node.id}'}))">SHARE NODE 🔗</div>`;
+            html += `<div style="margin-top:8px;color:#7c3aed;cursor:pointer;font-weight:bold;font-size:12px;" onclick="document.dispatchEvent(new CustomEvent('copyNodeLink', {detail: '${node.id}'}))">SHARE NODE</div>`;
 
             marker.bindPopup(html);
         }
@@ -1531,7 +1531,7 @@ function initializeDashboard(graphData) {
                 <td><strong>${idx + 1}</strong></td>
                 <td>
                     <a href="#" class="node-link" onclick="openNodePanel('${link.source}'); return false;">${escapeHTML(link.sourceName)}</a>
-                    <br><span style="color:#666;font-size:10px;">➔</span><br>
+                    <br><span style="color:#666;font-size:10px;">&darr;</span><br>
                     <a href="#" class="node-link" onclick="openNodePanel('${link.target}'); return false;">${escapeHTML(link.targetName)}</a>
                 </td>
                 <td style="color: ${link.distanceKm >= 10 ? '#ffc107' : '#ececec'}; font-weight: ${link.distanceKm >= 10 ? 'bold' : 'normal'};">
@@ -1799,7 +1799,7 @@ function initializeDashboard(graphData) {
             .attr("fill", "#fff")
             .style("font-size", d => d.short_name === 'NXTW' ? "14px" : "10px")
             .style("pointer-events", "none")
-            .text(d => d.short_name === 'NXTW' ? "🗼 NXTW" : (d.short_name || d.id.substring(0, 5)));
+            .text(d => d.short_name === 'NXTW' ? "NXTW" : (d.short_name || d.id.substring(0, 5)));
 
         window.highlightD3Route = function (path) {
             link.attr("stroke", d => {
@@ -2299,7 +2299,7 @@ function initializeDashboard(graphData) {
             const vc = document.getElementById('view-controls');
             if (vc) vc.classList.remove('collapsed');
             const nt = document.getElementById('nav-toggle');
-            if (nt) nt.textContent = '×';
+            if (nt) nt.textContent = 'Close';
         }
 
         const tour = window.driver.js.driver({
@@ -2312,7 +2312,7 @@ function initializeDashboard(graphData) {
                     const nt = document.getElementById('nav-toggle');
                     if (vc && !vc.classList.contains('collapsed')) {
                         vc.classList.add('collapsed');
-                        if (nt) nt.textContent = '☰';
+                        if (nt) nt.textContent = 'Menu';
                     }
                     const tc = document.getElementById('terminal-container');
                     const tt = document.getElementById('terminal-toggle');
@@ -2345,7 +2345,7 @@ function initializeDashboard(graphData) {
             const vc = document.getElementById('view-controls');
             if (vc) vc.classList.remove('collapsed');
             const nt = document.getElementById('nav-toggle');
-            if (nt) nt.textContent = '×';
+            if (nt) nt.textContent = 'Close';
         }
         const tour = window.driver.js.driver({
             steps: steps,
@@ -2355,7 +2355,7 @@ function initializeDashboard(graphData) {
                     const vc = document.getElementById('view-controls');
                     if (vc) vc.classList.add('collapsed');
                     const nt = document.getElementById('nav-toggle');
-                    if (nt) nt.textContent = '☰';
+                    if (nt) nt.textContent = 'Menu';
                 }
                 if (onEnd) onEnd();
             }
